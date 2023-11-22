@@ -639,31 +639,35 @@ namespace ns3
 		}
 	}
 
+	/*************************************************************
+	 * This function is responsible for creating a new packet to
+	 * be sent over the RDMA queue pair.
+	 ************************************************************/
 	Ptr<Packet> RdmaHw::GetNxtPacket(Ptr<RdmaQueuePair> qp)
 	{
 		uint32_t payload_size = qp->GetBytesLeft();
 		if (m_mtu < payload_size)
 			payload_size = m_mtu;
 		Ptr<Packet> p = Create<Packet>(payload_size);
-		// add SeqTsHeader
+		// add SeqTsHeader to store sequence information and a timestamp.
 		SeqTsHeader seqTs;
 		seqTs.SetSeq(qp->snd_nxt);
 		seqTs.SetPG(qp->m_pg);
 		p->AddHeader(seqTs);
 		// add udp header
 		UdpHeader udpHeader;
-		udpHeader.SetDestinationPort(qp->dport);
-		udpHeader.SetSourcePort(qp->sport);
+		udpHeader.SetDestinationPort(qp->dport); // destination port
+		udpHeader.SetSourcePort(qp->sport);		 // source
 		p->AddHeader(udpHeader);
 		// add ipv4 header
 		Ipv4Header ipHeader;
-		ipHeader.SetSource(qp->sip);
-		ipHeader.SetDestination(qp->dip);
-		ipHeader.SetProtocol(0x11);
-		ipHeader.SetPayloadSize(p->GetSize());
-		ipHeader.SetTtl(64);
-		ipHeader.SetTos(0);
-		ipHeader.SetIdentification(qp->m_ipid);
+		ipHeader.SetSource(qp->sip);			// source IP addresses
+		ipHeader.SetDestination(qp->dip);		// destination IP addresses
+		ipHeader.SetProtocol(0x11);				// protocol type (UDP)
+		ipHeader.SetPayloadSize(p->GetSize());	// payload size
+		ipHeader.SetTtl(64);					// TTL
+		ipHeader.SetTos(0);						// Type of Service (Tos)
+		ipHeader.SetIdentification(qp->m_ipid); // identification
 		p->AddHeader(ipHeader);
 		// add ppp header
 		PppHeader ppp;
@@ -678,12 +682,24 @@ namespace ns3
 		return p;
 	}
 
+	/*******************************************************************
+	 * This function is called when a packet has been successfully sent.
+	 * It updates the queue pair's state, specifically storing the size
+	 * of the last sent packet and updating the next available time for
+	 * sending.
+	 ******************************************************************/
 	void RdmaHw::PktSent(Ptr<RdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap)
 	{
 		qp->lastPktSize = pkt->GetSize();
 		UpdateNextAvail(qp, interframeGap, pkt->GetSize());
 	}
 
+	/*******************************************************************
+	 * This function updates the next available time for sending a
+	 * packet over the queue pair. It takes into account the interframe
+	 * gap and the time it takes to transmit the packet based on the
+	 * queue pair's rate.
+	 ******************************************************************/
 	void RdmaHw::UpdateNextAvail(Ptr<RdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size)
 	{
 		Time sendingTime;
@@ -694,13 +710,21 @@ namespace ns3
 		qp->m_nextAvail = Simulator::Now() + sendingTime;
 	}
 
+	/*******************************************************************
+	 * This function changes the transmission rate of the queue pair to
+	 * a new specified rate. It calculates the time it would take to
+	 * transmit the last sent packet at the new rate and updates the
+	 * next available time accordingly.
+	 *******************************************************************/
 	void RdmaHw::ChangeRate(Ptr<RdmaQueuePair> qp, DataRate new_rate)
 	{
+
 #if 1
+		// If m_rateBound is true, it uses the qp->m_rate for calculations;
 		Time sendingTime = Seconds(qp->m_rate.CalculateTxTime(qp->lastPktSize));
 		Time new_sendintTime = Seconds(new_rate.CalculateTxTime(qp->lastPktSize));
 		qp->m_nextAvail = qp->m_nextAvail + new_sendintTime - sendingTime;
-		// update nic's next avail event
+		// updates the NIC's next available event.
 		uint32_t nic_idx = GetNicIdxOfQp(qp);
 		m_nic[nic_idx].dev->UpdateNextAvail(qp->m_nextAvail);
 #endif

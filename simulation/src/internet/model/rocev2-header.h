@@ -12,15 +12,12 @@ namespace ns3
     public:
         RoCEv2Header();
 
-        // Override the methods from Header class
-        virtual uint32_t GetSerializedSize() const;
-        virtual void Serialize(Buffer::Iterator start) const;
-        virtual uint32_t Deserialize(Buffer::Iterator start);
-
         // Add your additional methods and member variables here
 
     private:
         // Add your member variables here
+        uint8_t synchronise;
+        uint8_t ReTx;
     };
 
 } // namespace ns3

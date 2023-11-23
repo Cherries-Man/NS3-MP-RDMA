@@ -325,8 +325,9 @@ namespace ns3
 
 	int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch)
 	{
+		// get Ipv4 ECN bits
 		uint8_t ecnbits = ch.GetIpv4EcnBits();
-
+		// calculate payload_size
 		uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
 
 		// TODO find corresponding rx queue pair

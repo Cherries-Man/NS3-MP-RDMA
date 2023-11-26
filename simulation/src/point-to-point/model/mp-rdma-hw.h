@@ -4,6 +4,7 @@
 
 #include "rdma-hw.h"
 #include <queue>
+#include <vector>
 
 namespace ns3
 {
@@ -23,6 +24,8 @@ namespace ns3
         TypeId GetTypeId(void);
         Ptr<Packet> GetNextPacket(Ptr<RdmaQueuePair> qp);
         int ReceiveUdp(Ptr<Packet> p, CustomHeader &ch);
+        bool doSynch();
+        void moveRcvWnd(uint32_t distance);
 
         enum Mode // mode of transport
         {
@@ -32,13 +35,19 @@ namespace ns3
 
         std::queue<VirtualPath> m_vpQueue; // virtual path queue
         Mode m_mode;
-        uint32_t m_cwnd;     // congestion window
-        Time m_lastSyncTime; // last time of synchronisation
+        uint32_t m_cwnd;               // congestion window
+        Time m_lastSyncTime;           // last time of synchronisation
+        std::vector<uint8_t> m_bitmap; // bitmap for out of order packets
+
+        int32_t aack;        // accumulative acknoledged sequence number
+        int32_t aack_idx;    // bitmap index of aack
+        int32_t max_rcv_seq; // the highest seq number received
         /**
          * set hyper parameters about MP-RDMA-HW
          */
-        double m_alpha = 1.0; // alpha for calculating synchronisation time
-        double m_delta = 64;  // out of order degree parameter
+        double m_alpha = 1.0;       // alpha for calculating synchronisation time
+        uint32_t m_delta = 32;      // out of order degree parameter
+        uint32_t m_bitmapSize = 64; // bitmap size
     };
 } /* namespace ns3 */
 

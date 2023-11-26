@@ -5,6 +5,8 @@
 #include <random>
 #include <ctime>
 #include <ns3/ppp-header.h>
+#include <ns3/qbb-header.h>
+#include <algorithm>
 
 namespace ns3
 {
@@ -21,7 +23,11 @@ namespace ns3
     MpRdmaHw::MpRdmaHw() : RdmaHw(),
                            m_mode(MP_RDMA_HW_MODE_NORMAL),
                            m_cwnd(1),
-                           m_lastSyncTime(Seconds(0))
+                           m_lastSyncTime(Seconds(0)),
+                           m_bitmap(m_bitmapSize, 0),
+                           aack(-1),
+                           aack_idx(-1),
+                           max_rcv_seq(-1)
     {
         // 初始化成员变量
         srand(1000);
@@ -39,12 +45,10 @@ namespace ns3
         RoCEv2Header rocev2;
 
         // set synchronise and ReTx
-        rocev2.SetSynchronise(0);
         if (m_lastSyncTime + m_alpha * (m_delta / m_cwnd) * qp->m_baseRtt > Simulator::Now() || qp->GetBytesLeft() == 0)
         {
             rocev2.SetSynchronise(1);
         }
-        rocev2.SetReTx(0);
         if (!m_vpQueue.empty() && m_vpQueue.front().ReTx)
         {
             rocev2.SetReTx(1);
@@ -107,10 +111,72 @@ namespace ns3
 
     int MpRdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch)
     {
+        if (ch.udp.seq > aack + m_bitmapSize)
+        {
+            // out of window, drop the packet
+            return 1;
+        }
+        if (ch.udp.seq <= aack ||
+            m_bitmap[(aack_idx + (ch.udp.seq - aack)) % m_bitmapSize] == 1)
+        {
+            // duplicate packet, drop it
+            return 2;
+        }
+        if (ch.udp.seq > max_rcv_seq)
+        {
+            max_rcv_seq = ch.udp.seq;
+        }
+        // get Ipv4 ECN bits
+        uint8_t ecnbits = ch.GetIpv4EcnBits();
+        // calculate payload_size
+        uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
+        // TODO find corresponding rx queue pair
+        Ptr<RdmaRxQueuePair> rxQp = GetRxQp(ch.dip, ch.sip, ch.udp.dport, ch.udp.sport, ch.udp.pg, true);
+        qbbHeader seqh;
+        if (ecnbits)
+        {
+            seqh.SetCnp();
+        }
+
+        /**
+         * In here, we only mark the packet as received. We don't
+         * consider Tail and Tail with completion in the simulation.
+         * But in the real world, they should be considered.
+         */
+        m_bitmap[(aack_idx + ch.udp.seq - aack) % m_bitmapSize] = 1;
+        if (ch.udp.synchronise && !doSynch())
+        {
+            // generate NACK
+        }
+        // generate ACK
 
         return RdmaHw::ReceiveUdp(p, ch);
     }
 
     // 其他辅助函数的实现...
+
+    /**
+     * Do the Synch Procedure
+     */
+    bool MpRdmaHw::doSynch()
+    {
+        for (int i = 0; i < std::min(m_delta, static_cast<uint32_t>(max_rcv_seq - aack)); i++)
+        {
+            if (m_bitmap[(aack_idx + i) % m_bitmapSize] == 0)
+            {
+                return false;
+            }
+        }
+        moveRcvWnd(std::min(m_delta, static_cast<uint32_t>(max_rcv_seq - aack)));
+        return true;
+    }
+
+    void MpRdmaHw::moveRcvWnd(uint32_t distance)
+    {
+        // update aack
+        aack += distance;
+        // update aack_idx
+        aack_idx += distance % m_bitmapSize;
+    }
 
 } /* namespace ns3 */

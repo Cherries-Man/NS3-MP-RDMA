@@ -18,7 +18,10 @@ namespace ns3
     }
 
     // 构造函数
-    MpRdmaHw::MpRdmaHw()
+    MpRdmaHw::MpRdmaHw() : RdmaHw(),
+                           m_mode(MP_RDMA_HW_MODE_NORMAL),
+                           m_cwnd(1),
+                           m_lastSyncTime(Seconds(0))
     {
         // 初始化成员变量
         srand(1000);
@@ -32,6 +35,20 @@ namespace ns3
             payload_size = m_mtu;
         }
         Ptr<Packet> p = Create<Packet>(payload_size);
+        // add RoCEv2Header
+        RoCEv2Header rocev2;
+
+        // set synchronise and ReTx
+        rocev2.SetSynchronise(0);
+        if (m_lastSyncTime + m_alpha * (m_delta / m_cwnd) * m_baseRTT.GetSeconds() > Simulator::Now() || qp->GetBytesLeft() == 0)
+        {
+            rocev2.SetSynchronise(1);
+        }
+        rocev2.SetReTx(0);
+        if (!m_vpQueue.empty() && m_vpQueue.front().ReTx)
+        {
+            rocev2.SetReTx(1);
+        }
         // add SeqTsHeader
         SeqTsHeader seqTs;
         seqTs.SetSeq(qp->snd_nxt);
@@ -86,6 +103,12 @@ namespace ns3
         qp->snd_nxt += payload_size;
         qp->m_ipid++;
         return p;
+    }
+
+    int MpRdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch)
+    {
+
+        return RdmaHw::ReceiveUdp(p, ch);
     }
 
     // 其他辅助函数的实现...

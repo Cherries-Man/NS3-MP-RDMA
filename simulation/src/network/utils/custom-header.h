@@ -114,6 +114,9 @@ namespace ns3
         uint16_t pg;
         uint32_t seq;
         IntHeader ih;
+        // RoCEv2Header
+        uint8_t synchronise;
+        uint8_t ReTx;
       } udp;
       // CnHeader
       struct

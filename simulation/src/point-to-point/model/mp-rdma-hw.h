@@ -34,7 +34,6 @@ namespace ns3
         Mode m_mode;
         uint32_t m_cwnd;     // congestion window
         Time m_lastSyncTime; // last time of synchronisation
-        Time m_baseRTT;      // base RTT(need to be estimated later, and implemented later)
         /**
          * set hyper parameters about MP-RDMA-HW
          */

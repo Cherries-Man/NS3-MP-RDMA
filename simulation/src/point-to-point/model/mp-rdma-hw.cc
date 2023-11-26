@@ -40,7 +40,7 @@ namespace ns3
 
         // set synchronise and ReTx
         rocev2.SetSynchronise(0);
-        if (m_lastSyncTime + m_alpha * (m_delta / m_cwnd) * m_baseRTT.GetSeconds() > Simulator::Now() || qp->GetBytesLeft() == 0)
+        if (m_lastSyncTime + m_alpha * (m_delta / m_cwnd) * qp->m_baseRtt > Simulator::Now() || qp->GetBytesLeft() == 0)
         {
             rocev2.SetSynchronise(1);
         }

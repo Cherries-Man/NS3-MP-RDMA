@@ -354,6 +354,7 @@ namespace ns3
 				ack.seq = i.ReadU32();
 				if (getInt)
 					ack.ih.Deserialize(i);
+				// RoCEv2AckHeader
 				ack.ReTx = i.ReadU8();
 				ack.AACK = i.ReadU32();
 				l4Size = GetAckSerializedSize();

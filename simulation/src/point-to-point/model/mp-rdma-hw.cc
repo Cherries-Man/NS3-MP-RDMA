@@ -20,20 +20,20 @@ namespace ns3
     }
 
     // 构造函数
-    MpRdmaHw::MpRdmaHw() : RdmaHw(),
-                           m_mode(MP_RDMA_HW_MODE_NORMAL),
-                           m_cwnd(1),
-                           m_lastSyncTime(Seconds(0)),
-                           m_bitmap(m_bitmapSize, 0),
-                           aack(-1),
-                           aack_idx(-1),
-                           max_rcv_seq(-1)
+    MpRdmaHw::MpRdmaHw() : RdmaHw()
+    //    m_mode(MP_RDMA_HW_MODE_NORMAL),
+    //    m_cwnd(1),
+    //    m_lastSyncTime(Seconds(0)),
+    //    m_bitmap(m_bitmapSize, 0),
+    //    aack(-1),
+    //    aack_idx(-1),
+    //    max_rcv_seq(-1)
     {
         // 初始化成员变量
         srand(1000);
     }
 
-    Ptr<Packet> MpRdmaHw::GetNextPacket(Ptr<RdmaQueuePair> qp)
+    Ptr<Packet> MpRdmaHw::GetNextPacket(Ptr<MpRdmaQueuePair> qp)
     {
         uint32_t payload_size = qp->GetBytesLeft();
         if (m_mtu < payload_size)
@@ -45,11 +45,11 @@ namespace ns3
         RoCEv2DataHeader rocev2;
 
         // set synchronise and ReTx
-        if (m_lastSyncTime + m_alpha * (m_delta / m_cwnd) * qp->m_baseRtt > Simulator::Now() || qp->GetBytesLeft() == 0)
+        if (qp->m_lastSyncTime + m_alpha * (m_delta / qp->m_cwnd) * qp->m_baseRtt > Simulator::Now() || qp->GetBytesLeft() == 0)
         {
             rocev2.SetSynchronise(1);
         }
-        if (!m_vpQueue.empty() && m_vpQueue.front().ReTx)
+        if (!qp->m_vpQueue.empty() && qp->m_vpQueue.front().ReTx)
         {
             rocev2.SetReTx(1);
         }
@@ -62,28 +62,28 @@ namespace ns3
         UdpHeader udpHeader;
         udpHeader.SetDestinationPort(qp->dport); // destination port
         //  || (rand() % 100 < 1) new path probing will be done in the receiver part
-        if (m_vpQueue.empty())
+        if (qp->m_vpQueue.empty())
         {
             // generate new virtual path
             VirtualPath vp;
             // source should be from 49152 to 65535
             vp.sPort = rand() % (65535 - 49152 + 1) + 49152;
             vp.numSend = 1;
-            m_vpQueue.push(vp);
+            qp->m_vpQueue.push(vp);
             qp->sport = vp.sPort;
         }
         else
         {
-            VirtualPath vp = m_vpQueue.front();
+            VirtualPath vp = qp->m_vpQueue.front();
             qp->sport = vp.sPort;
             if (vp.numSend == 1)
             {
-                m_vpQueue.pop();
+                qp->m_vpQueue.pop();
             }
             else
             {
                 vp.numSend--;
-                m_vpQueue.front() = vp;
+                qp->m_vpQueue.front() = vp;
             }
         }
         udpHeader.SetSourcePort(qp->sport);
@@ -109,29 +109,51 @@ namespace ns3
         return p;
     }
 
+    Ptr<MpRdmaRxQueuePair> MpRdmaHw::GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint16_t pg, bool create)
+    {
+        uint64_t key = ((uint64_t)dip << 32) | ((uint64_t)pg << 16) | (uint64_t)dport;
+        auto it = m_rxMpQpMap.find(key);
+        if (it != m_rxMpQpMap.end())
+            return it->second;
+        if (create)
+        {
+            // create new rx qp
+            Ptr<MpRdmaRxQueuePair> q = CreateObject<MpRdmaRxQueuePair>();
+            // init the qp
+            q->sip = sip;
+            q->dip = dip;
+            q->sport = sport;
+            q->dport = dport;
+            q->m_ecn_source.qIndex = pg;
+            // store in map
+            m_rxQpMap[key] = q;
+            return q;
+        }
+        return NULL;
+    }
+
     int MpRdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch)
     {
-        if (ch.udp.seq > aack + m_bitmapSize)
+        Ptr<MpRdmaRxQueuePair> rxMpQp = GetRxQp(ch.dip, ch.sip, ch.udp.dport, ch.udp.sport, ch.udp.pg, true);
+        if (ch.udp.seq > rxMpQp->aack + rxMpQp->m_bitmapSize)
         {
             // out of window, drop the packet
             return 1;
         }
-        if (ch.udp.seq <= aack ||
-            m_bitmap[(aack_idx + (ch.udp.seq - aack)) % m_bitmapSize] == 1)
+        if (ch.udp.seq <= rxMpQp->aack ||
+            rxMpQp->m_bitmap[(rxMpQp->aack_idx + (ch.udp.seq - rxMpQp->aack)) % rxMpQp->m_bitmapSize] == 1)
         {
             // duplicate packet, drop it
             return 2;
         }
-        if (ch.udp.seq > max_rcv_seq)
+        if (ch.udp.seq > rxMpQp->max_rcv_seq)
         {
-            max_rcv_seq = ch.udp.seq;
+            rxMpQp->max_rcv_seq = ch.udp.seq;
         }
         // get Ipv4 ECN bits
         uint8_t ecnbits = ch.GetIpv4EcnBits();
         // calculate payload_size
         uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
-        // TODO find corresponding rx queue pair
-        Ptr<RdmaRxQueuePair> rxQp = GetRxQp(ch.dip, ch.sip, ch.udp.dport, ch.udp.sport, ch.udp.pg, true);
         qbbHeader seqh;
         if (ecnbits)
         {
@@ -143,8 +165,8 @@ namespace ns3
          * consider Tail and Tail with completion in the simulation.
          * But in the real world, they should be considered.
          */
-        m_bitmap[(aack_idx + ch.udp.seq - aack) % m_bitmapSize] = 1;
-        if (ch.udp.synchronise && !doSynch())
+        rxMpQp->m_bitmap[(rxMpQp->aack_idx + ch.udp.seq - rxMpQp->aack) % rxMpQp->m_bitmapSize] = 1;
+        if (ch.udp.synchronise && !doSynch(rxMpQp))
         {
             // generate NACK
         }
@@ -158,25 +180,25 @@ namespace ns3
     /**
      * Do the Synch Procedure
      */
-    bool MpRdmaHw::doSynch()
+    bool MpRdmaHw::doSynch(Ptr<MpRdmaRxQueuePair> qp)
     {
-        for (int i = 0; i < std::min(m_delta, static_cast<uint32_t>(max_rcv_seq - aack)); i++)
+        for (int i = 0; i < std::min(m_delta, static_cast<uint32_t>(qp->max_rcv_seq - qp->aack)); i++)
         {
-            if (m_bitmap[(aack_idx + i) % m_bitmapSize] == 0)
+            if (qp->m_bitmap[(qp->aack_idx + i) % qp->m_bitmapSize] == 0)
             {
                 return false;
             }
         }
-        moveRcvWnd(std::min(m_delta, static_cast<uint32_t>(max_rcv_seq - aack)));
+        moveRcvWnd(qp, std::min(m_delta, static_cast<uint32_t>(qp->max_rcv_seq - qp->aack)));
         return true;
     }
 
-    void MpRdmaHw::moveRcvWnd(uint32_t distance)
+    void MpRdmaHw::moveRcvWnd(Ptr<MpRdmaRxQueuePair> qp, uint32_t distance)
     {
         // update aack
-        aack += distance;
+        qp->aack += distance;
         // update aack_idx
-        aack_idx += distance % m_bitmapSize;
+        qp->aack_idx += distance % qp->m_bitmapSize;
     }
 
 } /* namespace ns3 */

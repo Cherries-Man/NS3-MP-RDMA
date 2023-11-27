@@ -354,6 +354,8 @@ namespace ns3
 				ack.seq = i.ReadU32();
 				if (getInt)
 					ack.ih.Deserialize(i);
+				ack.ReTx = i.ReadU8();
+				ack.AACK = i.ReadU32();
 				l4Size = GetAckSerializedSize();
 			}
 			else if (l3Prot == 0xFE)
@@ -375,7 +377,8 @@ namespace ns3
 
 	uint32_t CustomHeader::GetAckSerializedSize(void)
 	{
-		return sizeof(ack.sport) + sizeof(ack.dport) + sizeof(ack.flags) + sizeof(ack.pg) + sizeof(ack.seq) + IntHeader::GetStaticSize();
+		return sizeof(ack.sport) + sizeof(ack.dport) + sizeof(ack.flags) + sizeof(ack.pg) + sizeof(ack.seq) + IntHeader::GetStaticSize() +
+			   sizeof(ack.ReTx) + sizeof(ack.AACK);
 	}
 
 	uint32_t CustomHeader::GetUdpHeaderSize(void)

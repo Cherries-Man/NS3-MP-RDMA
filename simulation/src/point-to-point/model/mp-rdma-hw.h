@@ -32,16 +32,16 @@ namespace ns3
             MP_RDMA_HW_MODE_NORMAL = 0,
             MP_RDMA_HW_MODE_RECOVERY = 1
         };
-
         std::queue<VirtualPath> m_vpQueue; // virtual path queue
         Mode m_mode;
-        uint32_t m_cwnd;               // congestion window
-        Time m_lastSyncTime;           // last time of synchronisation
-        std::vector<uint8_t> m_bitmap; // bitmap for out of order packets
+        uint32_t m_cwnd;     // congestion window
+        Time m_lastSyncTime; // last time of synchronisation
 
-        int32_t aack;        // accumulative acknoledged sequence number
-        int32_t aack_idx;    // bitmap index of aack
-        int32_t max_rcv_seq; // the highest seq number received
+        std::vector<uint8_t> m_bitmap; // bitmap for out of order packets
+        int32_t aack;                  // accumulative acknoledged sequence number
+        int32_t aack_idx;              // bitmap index of aack
+        int32_t max_rcv_seq;           // the highest seq number received
+
         /**
          * set hyper parameters about MP-RDMA-HW
          */

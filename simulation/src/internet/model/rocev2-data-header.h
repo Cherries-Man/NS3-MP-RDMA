@@ -1,6 +1,6 @@
 
-#ifndef ROCEV2_HEADER_H
-#define ROCEV2_HEADER_H
+#ifndef ROCEV2_DATA_HEADER_H
+#define ROCEV2_DATA_HEADER_H
 
 #include "ns3/header.h"
 #include "ns3/nstime.h"
@@ -8,10 +8,10 @@
 namespace ns3
 {
 
-    class RoCEv2Header : public Header
+    class RoCEv2DataHeader : public Header
     {
     public:
-        RoCEv2Header();
+        RoCEv2DataHeader();
 
         /**
          * \param sync the sync signal to the receiver

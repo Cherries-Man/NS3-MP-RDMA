@@ -1,6 +1,6 @@
 
 #include "mp-rdma-hw.h"
-#include "rocev2-header.h"
+#include "rocev2-data-header.h"
 #include <ns3/seq-ts-header.h>
 #include <random>
 #include <ctime>
@@ -41,8 +41,8 @@ namespace ns3
             payload_size = m_mtu;
         }
         Ptr<Packet> p = Create<Packet>(payload_size);
-        // add RoCEv2Header
-        RoCEv2Header rocev2;
+        // add RoCEv2DataHeader
+        RoCEv2DataHeader rocev2;
 
         // set synchronise and ReTx
         if (m_lastSyncTime + m_alpha * (m_delta / m_cwnd) * qp->m_baseRtt > Simulator::Now() || qp->GetBytesLeft() == 0)

@@ -172,7 +172,7 @@ namespace ns3
 				i.WriteHtonU32(udp.seq);
 				i.WriteHtonU16(udp.pg);
 				udp.ih.Serialize(i);
-				// RoCEv2Header
+				// RoCEv2DataHeader
 				i.WriteU8(udp.synchronise);
 				i.WriteU8(udp.ReTx);
 			}
@@ -330,7 +330,7 @@ namespace ns3
 				if (getInt)
 					udp.ih.Deserialize(i);
 
-				// RoCEv2Header
+				// RoCEv2DataHeader
 				udp.synchronise = i.ReadU8();
 				udp.ReTx = i.ReadU8();
 

@@ -7,6 +7,7 @@
 #include <ns3/ppp-header.h>
 #include <ns3/qbb-header.h>
 #include <algorithm>
+#include "rocev2-ack-header.h"
 
 namespace ns3
 {
@@ -150,29 +151,56 @@ namespace ns3
         {
             rxMpQp->max_rcv_seq = ch.udp.seq;
         }
-        // get Ipv4 ECN bits
-        uint8_t ecnbits = ch.GetIpv4EcnBits();
-        // calculate payload_size
-        uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
-        qbbHeader seqh;
-        if (ecnbits)
-        {
-            seqh.SetCnp();
-        }
-
         /**
          * In here, we only mark the packet as received. We don't
          * consider Tail and Tail with completion in the simulation.
          * But in the real world, they should be considered.
          */
         rxMpQp->m_bitmap[(rxMpQp->aack_idx + ch.udp.seq - rxMpQp->aack) % rxMpQp->m_bitmapSize] = 1;
+        // get Ipv4 ECN bits
+        uint8_t ecnbits = ch.GetIpv4EcnBits();
+        // calculate payload_size
+        uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
+        RoCEv2AckHeader roCEv2AckH;
+        qbbHeader seqh;
+        seqh.SetSeq(ch.udp.seq);
+        seqh.SetPG(ch.udp.pg);
+        seqh.SetSport(ch.udp.dport);
+        seqh.SetDport(ch.udp.sport);
+        seqh.SetIntHeader(ch.udp.ih);
+        if (ecnbits)
+        {
+            seqh.SetCnp();
+        }
+        Ipv4Header head;
+        head.SetDestination(Ipv4Address(ch.sip));
+        head.SetSource(Ipv4Address(ch.dip));
+        Ptr<Packet> newp = Create<Packet>(std::max(60 - 14 - 20 -
+                                                       (int)seqh.GetSerializedSize() -
+                                                       (int)roCEv2AckH.GetSerializedSize(),
+                                                   0));
+        // default set ACK
+        head.SetProtocol(0xFC);
         if (ch.udp.synchronise && !doSynch(rxMpQp))
         {
-            // generate NACK
+            // if sync fail set NACK
+            head.SetProtocol(0xFD);
         }
-        // generate ACK
-
-        return RdmaHw::ReceiveUdp(p, ch);
+        head.SetTtl(64);
+        head.SetPayloadSize(newp->GetSize());
+        head.SetIdentification(rxMpQp->m_ipid++);
+        roCEv2AckH.SetReTx(ch.udp.ReTx);  // set ReTx rely on the send packet
+        roCEv2AckH.SetAACK(rxMpQp->aack); // set AACK
+        // add headers in order
+        newp->AddHeader(roCEv2AckH);
+        newp->AddHeader(seqh);
+        newp->AddHeader(head);
+        AddHeader(newp, 0x800); // Attach PPP header
+        // send
+        uint32_t nic_idx = GetNicIdxOfRxQp(rxMpQp);
+        m_nic[nic_idx].dev->RdmaEnqueueHighPrioQ(newp);
+        m_nic[nic_idx].dev->TriggerTransmit();
+        return 0;
     }
 
     // 其他辅助函数的实现...

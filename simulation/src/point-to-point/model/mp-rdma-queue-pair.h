@@ -17,6 +17,7 @@ namespace ns3
     public:
         MpRdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport);
         static TypeId GetTypeId(void);
+        // uint32_t GetHash(void);
 
         enum Mode // mode of transport
         {
@@ -40,5 +41,19 @@ namespace ns3
         int32_t aack_idx;              // bitmap index of aack
         int32_t max_rcv_seq;           // the highest seq number received
         uint32_t m_bitmapSize = 64;    // bitmap size
+    };
+
+    class MpRdmaQueuePairGroup : public Object
+    {
+    public:
+        std::vector<Ptr<MpRdmaQueuePair>> m_qps;
+
+        static TypeId GetTypeId(void);
+        MpRdmaQueuePairGroup(void);
+        uint32_t GetN(void);
+        Ptr<MpRdmaQueuePair> Get(uint32_t idx);
+        Ptr<MpRdmaQueuePair> operator[](uint32_t idx);
+        void AddQp(Ptr<MpRdmaQueuePair> qp);
+        void Clear(void);
     };
 }

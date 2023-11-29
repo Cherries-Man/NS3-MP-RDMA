@@ -110,29 +110,6 @@ namespace ns3
         return p;
     }
 
-    Ptr<MpRdmaRxQueuePair> MpRdmaHw::GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint16_t pg, bool create)
-    {
-        uint64_t key = ((uint64_t)dip << 32) | ((uint64_t)pg << 16) | (uint64_t)dport;
-        auto it = m_rxMpQpMap.find(key);
-        if (it != m_rxMpQpMap.end())
-            return it->second;
-        if (create)
-        {
-            // create new rx qp
-            Ptr<MpRdmaRxQueuePair> q = CreateObject<MpRdmaRxQueuePair>();
-            // init the qp
-            q->sip = sip;
-            q->dip = dip;
-            q->sport = sport;
-            q->dport = dport;
-            q->m_ecn_source.qIndex = pg;
-            // store in map
-            m_rxQpMap[key] = q;
-            return q;
-        }
-        return NULL;
-    }
-
     int MpRdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch)
     {
         Ptr<MpRdmaRxQueuePair> rxMpQp = GetRxQp(ch.dip, ch.sip, ch.udp.dport, ch.udp.sport, ch.udp.pg, true);
@@ -227,6 +204,74 @@ namespace ns3
         qp->aack += distance;
         // update aack_idx
         qp->aack_idx += distance % qp->m_bitmapSize;
+    }
+
+    Ptr<MpRdmaQueuePair> MpRdmaHw::GetQp(uint32_t dip, uint16_t dport, uint16_t pg)
+    {
+        auto it = m_MpQpMap.find(GetQpKey(dip, dport, pg));
+        if (it != m_MpQpMap.end())
+            return it->second;
+        return NULL;
+    }
+
+    Ptr<MpRdmaRxQueuePair> MpRdmaHw::GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint16_t pg, bool create)
+    {
+        uint64_t key = GetQpKey(dip, dport, pg);
+        auto it = m_rxMpQpMap.find(key);
+        if (it != m_rxMpQpMap.end())
+            return it->second;
+        if (create)
+        {
+            // create new rx qp
+            Ptr<MpRdmaRxQueuePair> q = CreateObject<MpRdmaRxQueuePair>();
+            // init the qp
+            q->sip = sip;
+            q->dip = dip;
+            q->sport = sport;
+            q->dport = dport;
+            q->m_ecn_source.qIndex = pg;
+            // store in map
+            m_rxQpMap[key] = q;
+            return q;
+        }
+        return NULL;
+    }
+
+    void MpRdmaHw::AddQueuePair(uint64_t size, uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport,
+                                uint32_t win, uint32_t baseRtt, Callback<void> notifyAppFinish)
+    {
+        // create qp
+        Ptr<MpRdmaQueuePair> qp = CreateObject<MpRdmaQueuePair>(pg, sip, dip, sport, dport);
+        qp->SetSize(size);
+        qp->SetBaseRtt(baseRtt);
+        qp->SetAppNotifyCallback(notifyAppFinish);
+
+        // add qp
+        uint32_t nic_idx = GetNicIdxOfQp(qp);
+        m_nic[nic_idx].qpGrp->AddQp(qp);
+        m_MpQpMap[GetQpKey(dip.Get(), dport, pg)] = qp;
+
+        // set init variables
+        // DataRate m_bps = m_nic[nic_idx].dev->GetDataRate();
+        // qp->m_rate = m_bps;
+    }
+
+    uint32_t MpRdmaHw::GetNicIdxOfQp(Ptr<MpRdmaQueuePair> qp)
+    {
+        auto &v = m_rtTable[qp->dip.Get()];
+        if (v.size() > 0)
+        {
+            return v[qp->GetHash() % v.size()];
+        }
+        else
+        {
+            NS_ASSERT_MSG(false, "We assume at least one NIC is alive");
+        }
+    }
+
+    uint64_t MpRdmaHw::GetQpKey(uint32_t dip, uint16_t dport, uint16_t pg)
+    {
+        return ((uint64_t)dip << 32) | ((uint64_t)dport << 16) | (uint64_t)pg;
     }
 
 } /* namespace ns3 */

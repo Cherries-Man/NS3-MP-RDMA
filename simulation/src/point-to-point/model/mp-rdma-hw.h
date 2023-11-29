@@ -9,13 +9,17 @@
 
 namespace ns3
 {
-    // VP: Virtual Path
-    // struct VirtualPath
-    // {
-    //     uint32_t sPort;  // source port
-    //     uint8_t numSend; // number allowed to send in this path
-    //     bool ReTx;       // whether this path is used for retransmission
-    // };
+    struct MpRdmaInterfaceMgr
+    {
+        Ptr<QbbNetDevice> dev;
+        Ptr<MpRdmaQueuePairGroup> qpGrp;
+
+        MpRdmaInterfaceMgr() : dev(NULL), qpGrp(NULL) {}
+        MpRdmaInterfaceMgr(Ptr<QbbNetDevice> _dev)
+        {
+            dev = _dev;
+        }
+    };
 
     class MpRdmaHw : public RdmaHw
     {
@@ -27,23 +31,12 @@ namespace ns3
         int ReceiveUdp(Ptr<Packet> p, CustomHeader &ch);
         bool doSynch(Ptr<MpRdmaRxQueuePair> rxMpQp);
         void moveRcvWnd(Ptr<MpRdmaRxQueuePair> rxMpQp, uint32_t distance);
+        Ptr<MpRdmaQueuePair> GetQp(uint32_t dip, uint16_t sport, uint16_t pg);
         Ptr<MpRdmaRxQueuePair> GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint16_t pg, bool create);
-
-        // enum Mode // mode of transport
-        // {
-        //     MP_RDMA_HW_MODE_NORMAL = 0,
-        //     MP_RDMA_HW_MODE_RECOVERY = 1
-        // };
-        // std::queue<VirtualPath> m_vpQueue; // virtual path queue
-        // Mode m_mode;
-        // uint32_t m_cwnd;     // congestion window
-        // Time m_lastSyncTime; // last time of synchronisation
-
-        // std::vector<uint8_t> m_bitmap; // bitmap for out of order packets
-        // int32_t aack;                  // accumulative acknoledged sequence number
-        // int32_t aack_idx;              // bitmap index of aack
-        // int32_t max_rcv_seq;           // the highest seq number received
-        // uint32_t m_bitmapSize = 64;    // bitmap size
+        void AddQueuePair(uint64_t size, uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport,
+                          uint32_t win, uint32_t baseRtt, Callback<void> notifyAppFinish);
+        uint32_t GetNicIdxOfQp(Ptr<MpRdmaQueuePair> qp);
+        uint64_t GetQpKey(uint32_t dip, uint16_t dport, uint16_t pg);
 
         /**
          * set hyper parameters about MP-RDMA-HW
@@ -52,6 +45,9 @@ namespace ns3
         uint32_t m_delta = 32; // out of order degree parameter
 
         std::unordered_map<uint64_t, Ptr<MpRdmaRxQueuePair>> m_rxMpQpMap; // mapping from uint64_t to rx qp
+        std::unordered_map<uint64_t, Ptr<MpRdmaQueuePair>> m_MpQpMap;     // mapping from uint64_t to qp
+        std::unordered_map<uint32_t, std::vector<int>> m_rtTable;         // map from ip address (u32) to possible ECMP port (index of dev)
+        std::vector<MpRdmaInterfaceMgr> m_nic;                            // list of running nic controlled by this MpRdmaHw
     };
 } /* namespace ns3 */
 

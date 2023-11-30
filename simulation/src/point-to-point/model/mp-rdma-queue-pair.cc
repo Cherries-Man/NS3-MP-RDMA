@@ -8,8 +8,12 @@ namespace ns3
     MpRdmaQueuePair::MpRdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport)
         : RdmaQueuePair(pg, _sip, _dip, _sport, _dport),
           m_mode(MP_RDMA_HW_MODE_NORMAL),
-          m_cwnd(1),
-          m_lastSyncTime(Seconds(0))
+          m_cwnd(1.0),
+          m_lastSyncTime(Seconds(0)),
+          aack(-1),
+          snd_retx(0),
+          max_ack_seq(-1),
+          snd_nxt(0)
     {
     }
 
@@ -20,24 +24,6 @@ namespace ns3
                                 .AddConstructor<MpRdmaQueuePair>();
         return tid;
     }
-
-    // uint32_t RdmaQueuePair::GetHash(void)
-    // {
-    //     union
-    //     {
-    //         struct
-    //         {
-    //             uint32_t sip, dip;
-    //             uint16_t sport, dport;
-    //         };
-    //         char c[12];
-    //     } buf;
-    //     buf.sip = sip.Get();
-    //     buf.dip = dip.Get();
-    //     buf.sport = sport;
-    //     buf.dport = dport;
-    //     return Hash32(buf.c, 12);
-    // }
 
     /**
      * MpRdmaRxQueuePair class implementation

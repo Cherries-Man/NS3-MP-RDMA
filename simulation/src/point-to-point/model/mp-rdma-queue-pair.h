@@ -26,8 +26,13 @@ namespace ns3
         };
         std::queue<VirtualPath> m_vpQueue; // virtual path queue
         Mode m_mode;
-        uint32_t m_cwnd;     // congestion window
+        double m_cwnd;       // congestion window
+        int32_t m_inflate;   // number of acked packets between snd_una and snd_nxt
         Time m_lastSyncTime; // last time of synchronisation
+        int32_t aack;        // accumulative acknoledged sequence number(begin from -1)
+        uint32_t snd_retx;   // number of retransmitted packets(specify by the NACK packet)
+        int64_t max_ack_seq; // the highest ack number received(begin from -1)
+        uint64_t snd_nxt;    // next sequence number to send(begin from 0)
     };
 
     class MpRdmaRxQueuePair : public RdmaRxQueuePair

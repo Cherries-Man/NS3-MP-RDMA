@@ -1,4 +1,5 @@
 #include "mp-rdma-queue-pair.h"
+#include <ns3/simulator.h>
 
 namespace ns3
 {
@@ -9,12 +10,20 @@ namespace ns3
         : RdmaQueuePair(pg, _sip, _dip, _sport, _dport),
           m_mode(MP_RDMA_HW_MODE_NORMAL),
           m_cwnd(1.0),
-          m_lastSyncTime(Seconds(0)),
-          aack(-1),
+          m_lastSyncTime(Simulator::Now()),
+          snd_una(0),
           snd_retx(0),
-          max_ack_seq(-1),
-          snd_nxt(0)
+          max_acked_seq(-1),
+          snd_nxt(0),
+          snd_done(0),
+          m_lastProbpathTime(Simulator::Now())
     {
+        // generate new virtual path
+        VirtualPath vp;
+        // source should be from 49152 to 65535
+        vp.sPort = rand() % (65535 - 49152 + 1) + 49152;
+        vp.numSend = 1;
+        m_vpQueue.push(vp);
     }
 
     TypeId MpRdmaQueuePair::GetTypeId(void)
@@ -23,6 +32,16 @@ namespace ns3
                                 .SetParent<RdmaQueuePair>()
                                 .AddConstructor<MpRdmaQueuePair>();
         return tid;
+    }
+
+    uint32_t MpRdmaQueuePair::GetPacketsLeft(uint32_t mtu)
+    {
+        return ((m_size - snd_nxt) + (mtu - 1)) / mtu;
+    }
+
+    uint64_t MpRdmaQueuePair::GetBytesLeft(uint32_t mtu)
+    {
+        return m_size - snd_done * mtu;
     }
 
     /**

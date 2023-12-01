@@ -22,13 +22,6 @@ namespace ns3
 
     // 构造函数
     MpRdmaHw::MpRdmaHw() : RdmaHw()
-    //    m_mode(MP_RDMA_HW_MODE_NORMAL),
-    //    m_cwnd(1),
-    //    m_lastSyncTime(Seconds(0)),
-    //    m_bitmap(m_bitmapSize, 0),
-    //    aack(-1),
-    //    aack_idx(-1),
-    //    max_rcv_seq(-1)
     {
         // 初始化成员变量
         srand(1000);
@@ -36,61 +29,66 @@ namespace ns3
 
     Ptr<Packet> MpRdmaHw::GetNextPacket(Ptr<MpRdmaQueuePair> qp)
     {
-        uint32_t payload_size = qp->GetBytesLeft();
-        if (m_mtu < payload_size)
-        {
-            payload_size = m_mtu;
-        }
-        Ptr<Packet> p = Create<Packet>(payload_size);
-        // add RoCEv2DataHeader
-        RoCEv2DataHeader rocev2;
-
-        // set synchronise and ReTx
-        if (qp->m_lastSyncTime + m_alpha * (m_delta / qp->m_cwnd) * qp->m_baseRtt > Simulator::Now() || qp->GetBytesLeft() == 0)
-        {
-            rocev2.SetSynchronise(1);
-        }
-        if (!qp->m_vpQueue.empty() && qp->m_vpQueue.front().ReTx)
-        {
-            rocev2.SetReTx(1);
-        }
-        // add SeqTsHeader
-        SeqTsHeader seqTs;
-        seqTs.SetSeq(qp->snd_nxt);
-        seqTs.SetPG(qp->m_pg);
-        p->AddHeader(seqTs);
-        // add udp header
-        UdpHeader udpHeader;
-        udpHeader.SetDestinationPort(qp->dport); // destination port
-        //  || (rand() % 100 < 1) new path probing will be done in the receiver part
+        // return null if no more packets to send
         if (qp->m_vpQueue.empty())
         {
-            // generate new virtual path
-            VirtualPath vp;
-            // source should be from 49152 to 65535
-            vp.sPort = rand() % (65535 - 49152 + 1) + 49152;
-            vp.numSend = 1;
-            qp->m_vpQueue.push(vp);
-            qp->sport = vp.sPort;
+            return nullptr;
+        }
+
+        Ptr<Packet> p;
+        // create RoCEv2DataHeader
+        RoCEv2DataHeader rocev2;
+        // create SeqTsHeader
+        SeqTsHeader seqTs;
+        // create udp header
+        UdpHeader udpHeader;
+        // create ipv4 header
+        Ipv4Header ipHeader;
+        // create ppp header
+        PppHeader ppp;
+
+        if (qp->m_mode == MpRdmaQueuePair::MP_RDMA_HW_MODE_NORMAL)
+        {
+            // normal mode
+            uint32_t payload_size = qp->GetPacketsLeft(m_mtu) == 1 ? qp->GetBytesLeft(m_mtu) : m_mtu;
+            p = Create<Packet>(payload_size);
+            // set synchronise and ReTx
+            if (qp->m_lastSyncTime + m_alpha * (m_delta / qp->m_cwnd) * qp->m_baseRtt < Simulator::Now() || qp->m_size / m_mtu == qp->snd_done)
+            {
+                rocev2.SetSynchronise(1);
+                qp->m_lastSyncTime = Simulator::Now();
+            }
+            seqTs.SetSeq(qp->snd_done);
+            qp->snd_done++;
+        }
+        else if (qp->m_mode == MpRdmaQueuePair::MP_RDMA_HW_MODE_RECOVERY)
+        {
+            uint32_t payload_size = qp->snd_retx == qp->m_size / m_mtu ? qp->m_size % m_mtu : m_mtu;
+            p = Create<Packet>(payload_size);
+            // recovery mode
+            rocev2.SetReTx(1);
+            seqTs.SetSeq(qp->snd_retx);
+        }
+        seqTs.SetPG(qp->m_pg);
+
+        VirtualPath vp = qp->m_vpQueue.front();
+        qp->sport = vp.sPort;
+        if (vp.numSend == 1)
+        {
+            qp->m_vpQueue.pop();
         }
         else
         {
-            VirtualPath vp = qp->m_vpQueue.front();
-            qp->sport = vp.sPort;
-            if (vp.numSend == 1)
-            {
-                qp->m_vpQueue.pop();
-            }
-            else
-            {
-                vp.numSend--;
-                qp->m_vpQueue.front() = vp;
-            }
+            vp.numSend--;
+            qp->m_vpQueue.front() = vp;
         }
+        if (Simulator::Now() - qp->m_lastProbpathTime > qp->m_baseRtt && rand() % 100 == 0)
+        {
+            qp->sport = rand() % (65535 - 49152 + 1) + 49152;
+        }
+        udpHeader.SetDestinationPort(qp->dport); // destination port
         udpHeader.SetSourcePort(qp->sport);
-        p->AddHeader(udpHeader);
-        // add ipv4 header
-        Ipv4Header ipHeader;
+
         ipHeader.SetSource(qp->sip);            // source IP addresses
         ipHeader.SetDestination(qp->dip);       // destination IP addresses
         ipHeader.SetProtocol(0x11);             // protocol type (UDP)
@@ -98,15 +96,18 @@ namespace ns3
         ipHeader.SetTtl(64);                    // TTL
         ipHeader.SetTos(0);                     // Type of Service (Tos)
         ipHeader.SetIdentification(qp->m_ipid); // identification
-        p->AddHeader(ipHeader);
-        // add ppp header
-        PppHeader ppp;
+
         ppp.SetProtocol(0x0021); // EtherToPpp(0x800), see point-to-point-net-device.cc
+
+        p->AddHeader(rocev2);
+        p->AddHeader(seqTs);
+        p->AddHeader(udpHeader);
+        p->AddHeader(ipHeader);
         p->AddHeader(ppp);
 
         // update state
-        qp->snd_nxt += payload_size;
         qp->m_ipid++;
+
         return p;
     }
 
@@ -180,6 +181,67 @@ namespace ns3
         return 0;
     }
 
+    int MpRdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch)
+    {
+        Ptr<MpRdmaQueuePair> qp = GetQp(ch.sip, ch.ack.sport, ch.udp.pg);
+        uint32_t nic_idx = GetNicIdxOfQp(qp);
+        Ptr<QbbNetDevice> dev = m_nic[nic_idx].dev;
+
+        uint8_t cnp = (ch.ack.flags >> qbbHeader::FLAG_CNP) & 1;
+        if (cnp)
+        {
+            qp->m_cwnd -= 1 / 2;
+        }
+        else
+        {
+            qp->m_cwnd += 1 / qp->m_cwnd;
+        }
+
+        // ACK
+        if (ch.ack.seq >= qp->snd_una && ch.ack.seq < qp->snd_nxt)
+        {
+            qp->m_inflate++;
+        }
+        else
+        {
+            // Ghost ACK, return 1
+            return 1;
+        }
+
+        if (ch.ack.seq <= qp->max_acked_seq - m_delta && ch.ack.ReTx == 0)
+        {
+            // out of order ACK, drop it
+            return 2;
+        }
+        if (ch.ack.AACK + 1 > qp->snd_una)
+        {
+            qp->snd_una = ch.ack.AACK + 1;
+            if (qp->m_mode == MpRdmaQueuePair::Mode::MP_RDMA_HW_MODE_RECOVERY && qp->snd_una > qp->recovery)
+            {
+                qp->m_mode = MpRdmaQueuePair::Mode::MP_RDMA_HW_MODE_NORMAL;
+            }
+        }
+        if (ch.ack.seq > qp->max_acked_seq)
+        {
+            qp->max_acked_seq = ch.ack.seq;
+        }
+
+        if (ch.l3Prot == 0xFD)
+        { // NACK
+            qp->m_mode = MpRdmaQueuePair::MP_RDMA_HW_MODE_RECOVERY;
+            qp->snd_retx = ch.ack.seq;
+            qp->recovery = qp->snd_nxt;
+        }
+        else if (ch.l3Prot == 0xFC)
+        { // ACK
+            uint32_t awnd = qp->m_cwnd - ((qp->snd_nxt - qp->snd_una) - qp->m_inflate);
+            uint8_t numSend = std::min(std::min(awnd, 2u), qp->GetPacketsLeft(dev->GetMtu()));
+            qp->m_vpQueue.push({ch.ack.dport, numSend, 0});
+        }
+
+        return 0;
+    }
+
     // 其他辅助函数的实现...
 
     /**
@@ -191,6 +253,7 @@ namespace ns3
         {
             if (qp->m_bitmap[(qp->aack_idx + i) % qp->m_bitmapSize] == 0)
             {
+                moveRcvWnd(qp, i);
                 return false;
             }
         }

@@ -235,6 +235,11 @@ namespace ns3
         else if (ch.l3Prot == 0xFC)
         { // ACK
             uint32_t awnd = qp->m_cwnd - ((qp->snd_nxt - qp->snd_una) - qp->m_inflate);
+            if (qp->GetPacketsLeft(dev->GetMtu()) == 0)
+            { // if there is no packet to send, do path window redution
+                qp->m_cwnd = std::max(qp->m_cwnd - 1, 1.0);
+                return 0;
+            }
             uint8_t numSend = std::min(std::min(awnd, 2u), qp->GetPacketsLeft(dev->GetMtu()));
             qp->m_vpQueue.push({ch.ack.dport, numSend, 0});
         }

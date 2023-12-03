@@ -483,8 +483,7 @@ namespace ns3
 		return true;
 	}
 
-	bool
-	QbbNetDevice::TransmitStart(Ptr<Packet> p)
+	bool QbbNetDevice::TransmitStart(Ptr<Packet> p)
 	{
 		NS_LOG_FUNCTION(this << p);
 		NS_LOG_LOGIC("UID is " << p->GetUid() << ")");

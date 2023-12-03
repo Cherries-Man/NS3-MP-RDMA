@@ -12,13 +12,17 @@ namespace ns3
         bool ReTx;       // whether this path is used for retransmission
     };
 
-    class MpRdmaQueuePair : public RdmaQueuePair
+    class MpRdmaQueuePair : public Object
     {
     public:
         MpRdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport);
         static TypeId GetTypeId(void);
         uint32_t GetPacketsLeft(uint32_t mtu);
         uint64_t GetBytesLeft(uint32_t mtu);
+        void SetSize(uint64_t size);
+        void SetBaseRtt(uint64_t baseRtt);
+        void SetAppNotifyCallback(Callback<void> notifyAppFinish);
+        uint32_t GetHash(void);
 
         enum Mode // mode of transport
         {
@@ -37,19 +41,31 @@ namespace ns3
         uint64_t snd_nxt;        // next sequence number to send(begin from 0)
         uint64_t snd_done;       // not in the m_vpQueue yet, going to go into m_vpQueue
         Time m_lastProbpathTime; // last time of probing path
+        uint64_t m_size;         // size of data to be sent over the RDMA Queue Pair
+        uint64_t m_baseRtt;      // Base Round-Trip Time (RTT) of this Queue Pair
+        uint16_t m_pg;           // Priority Group (PG) and IP Identification (IPID)
+        uint16_t m_ipid;
+        Ipv4Address sip, dip; // Source and destination IP addresses and ports
+        uint16_t sport, dport;
+        // Callback to notify the application when the transmission is finished
+        Callback<void> m_notifyAppFinish;
     };
 
-    class MpRdmaRxQueuePair : public RdmaRxQueuePair
+    class MpRdmaRxQueuePair : public Object
     {
     public:
         MpRdmaRxQueuePair();
         static TypeId GetTypeId(void);
+        uint32_t GetHash(void);
 
         std::vector<uint8_t> m_bitmap; // bitmap for out of order packets
         int32_t aack;                  // accumulative acknoledged sequence number
         int32_t aack_idx;              // bitmap index of aack
         int32_t max_rcv_seq;           // the highest seq number received
         uint32_t m_bitmapSize = 64;    // bitmap size
+        uint16_t m_ipid;
+        uint32_t sip, dip;
+        uint16_t sport, dport;
     };
 
     class MpRdmaQueuePairGroup : public Object

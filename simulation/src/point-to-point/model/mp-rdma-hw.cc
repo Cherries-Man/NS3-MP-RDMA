@@ -21,7 +21,7 @@ namespace ns3
     }
 
     // 构造函数
-    MpRdmaHw::MpRdmaHw() : RdmaHw()
+    MpRdmaHw::MpRdmaHw()
     {
         // 初始化成员变量
         srand(1000);
@@ -297,12 +297,24 @@ namespace ns3
             q->dip = dip;
             q->sport = sport;
             q->dport = dport;
-            q->m_ecn_source.qIndex = pg;
             // store in map
-            m_rxQpMap[key] = q;
+            m_rxMpQpMap[key] = q;
             return q;
         }
         return NULL;
+    }
+
+    uint32_t MpRdmaHw::GetNicIdxOfRxQp(Ptr<MpRdmaRxQueuePair> q)
+    {
+        auto &v = m_rtTable[q->dip];
+        if (v.size() > 0)
+        {
+            return v[q->GetHash() % v.size()];
+        }
+        else
+        {
+            NS_ASSERT_MSG(false, "We assume at least one NIC is alive");
+        }
     }
 
     void MpRdmaHw::AddQueuePair(uint64_t size, uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport,
@@ -340,6 +352,32 @@ namespace ns3
     uint64_t MpRdmaHw::GetQpKey(uint32_t dip, uint16_t dport, uint16_t pg)
     {
         return ((uint64_t)dip << 32) | ((uint64_t)dport << 16) | (uint64_t)pg;
+    }
+
+    void MpRdmaHw::SetNode(Ptr<Node> node)
+    {
+        m_node = node;
+    }
+
+    void MpRdmaHw::AddHeader(Ptr<Packet> p, uint16_t protocolNumber)
+    {
+        PppHeader ppp;
+        ppp.SetProtocol(EtherToPpp(protocolNumber));
+        p->AddHeader(ppp);
+    }
+
+    uint16_t MpRdmaHw::EtherToPpp(uint16_t proto)
+    {
+        switch (proto)
+        {
+        case 0x0800:
+            return 0x0021; // IPv4
+        case 0x86DD:
+            return 0x0057; // IPv6
+        default:
+            NS_ASSERT_MSG(false, "PPP Protocol number not defined!");
+        }
+        return 0;
     }
 
 } /* namespace ns3 */

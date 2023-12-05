@@ -1,4 +1,3 @@
-#include <ns3/rdma-queue-pair.h>
 #include <queue>
 #include <vector>
 
@@ -15,14 +14,16 @@ namespace ns3
     class MpRdmaQueuePair : public Object
     {
     public:
-        MpRdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport);
+        MpRdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport, uint32_t _mtu);
         static TypeId GetTypeId(void);
         uint32_t GetPacketsLeft(uint32_t mtu);
-        uint64_t GetBytesLeft(uint32_t mtu);
+        uint64_t GetBytesLeft();
         void SetSize(uint64_t size);
         void SetBaseRtt(uint64_t baseRtt);
         void SetAppNotifyCallback(Callback<void> notifyAppFinish);
         uint32_t GetHash(void);
+        bool IsFinished();
+        bool IsWinBound();
 
         enum Mode // mode of transport
         {
@@ -49,6 +50,8 @@ namespace ns3
         uint16_t sport, dport;
         // Callback to notify the application when the transmission is finished
         Callback<void> m_notifyAppFinish;
+        Time m_nextAvail; // Soonest time of next send
+        uint32_t m_mtu;   // Maximum Transmission Unit (MTU) of the Queue Pair
     };
 
     class MpRdmaRxQueuePair : public Object

@@ -1,12 +1,13 @@
 #include "mp-rdma-queue-pair.h"
 #include <ns3/simulator.h>
+#include <ns3/ipv4-header.h>
 
 namespace ns3
 {
     /**
      * MpRdmaQueuePair class implementation
      */
-    MpRdmaQueuePair::MpRdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport)
+    MpRdmaQueuePair::MpRdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport, uint32_t _mtu)
         : m_mode(MP_RDMA_HW_MODE_NORMAL),
           m_cwnd(1.0),
           m_lastSyncTime(Simulator::Now()),
@@ -23,7 +24,9 @@ namespace ns3
           sip(_sip),
           dip(_dip),
           sport(_sport),
-          dport(_dport)
+          dport(_dport),
+          m_nextAvail(Time(0)),
+          m_mtu(_mtu)
 
     {
         // generate new virtual path
@@ -37,7 +40,7 @@ namespace ns3
     TypeId MpRdmaQueuePair::GetTypeId(void)
     {
         static TypeId tid = TypeId("ns3::MpRdmaQueuePair")
-                                .SetParent<RdmaQueuePair>()
+                                .SetParent<Object>()
                                 .AddConstructor<MpRdmaQueuePair>();
         return tid;
     }
@@ -47,9 +50,9 @@ namespace ns3
         return ((m_size - snd_nxt) + (mtu - 1)) / mtu;
     }
 
-    uint64_t MpRdmaQueuePair::GetBytesLeft(uint32_t mtu)
+    uint64_t MpRdmaQueuePair::GetBytesLeft()
     {
-        return m_size - snd_done * mtu;
+        return m_size - snd_done * m_mtu;
     }
 
     void MpRdmaQueuePair::SetSize(uint64_t size)
@@ -85,6 +88,16 @@ namespace ns3
         return Hash32(buf.c, 12);
     }
 
+    bool MpRdmaQueuePair::IsFinished()
+    {
+        return snd_done * m_mtu >= m_size;
+    }
+
+    bool MpRdmaQueuePair::IsWinBound()
+    {
+        return snd_nxt - snd_una >= m_cwnd;
+    }
+
     /**
      * MpRdmaRxQueuePair class implementation
      */
@@ -104,7 +117,7 @@ namespace ns3
     TypeId MpRdmaRxQueuePair::GetTypeId(void)
     {
         static TypeId tid = TypeId("ns3::MpRdmaRxQueuePair")
-                                .SetParent<RdmaRxQueuePair>()
+                                .SetParent<Object>()
                                 .AddConstructor<MpRdmaRxQueuePair>();
         return tid;
     }

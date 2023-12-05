@@ -45,9 +45,9 @@ namespace ns3
         return tid;
     }
 
-    uint32_t MpRdmaQueuePair::GetPacketsLeft(uint32_t mtu)
+    uint32_t MpRdmaQueuePair::GetPacketsLeft()
     {
-        return ((m_size - snd_nxt) + (mtu - 1)) / mtu;
+        return ((m_size - snd_nxt) + (m_mtu - 1)) / m_mtu;
     }
 
     uint64_t MpRdmaQueuePair::GetBytesLeft()

@@ -16,7 +16,7 @@ namespace ns3
     public:
         MpRdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport, uint32_t _mtu);
         static TypeId GetTypeId(void);
-        uint32_t GetPacketsLeft(uint32_t mtu);
+        uint32_t GetPacketsLeft();
         uint64_t GetBytesLeft();
         void SetSize(uint64_t size);
         void SetBaseRtt(uint64_t baseRtt);

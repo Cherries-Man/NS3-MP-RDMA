@@ -8,6 +8,7 @@
 #include <ns3/qbb-header.h>
 #include <algorithm>
 #include "rocev2-ack-header.h"
+#include "mp-qbb-net-device.h"
 
 namespace ns3
 {
@@ -15,7 +16,7 @@ namespace ns3
     TypeId MpRdmaHw::GetTypeId(void)
     {
         static TypeId tid = TypeId("ns3::MpRdmaHw")
-                                .SetParent<RdmaHw>()
+                                .SetParent<Object>()
                                 .AddConstructor<MpRdmaHw>();
         return tid;
     }
@@ -50,7 +51,7 @@ namespace ns3
         if (qp->m_mode == MpRdmaQueuePair::MP_RDMA_HW_MODE_NORMAL)
         {
             // normal mode
-            uint32_t payload_size = qp->GetPacketsLeft(m_mtu) == 1 ? qp->GetBytesLeft(m_mtu) : m_mtu;
+            uint32_t payload_size = qp->GetPacketsLeft() == 1 ? qp->GetBytesLeft() : m_mtu;
             p = Create<Packet>(payload_size);
             // set synchronise and ReTx
             if (qp->m_lastSyncTime + m_alpha * (m_delta / qp->m_cwnd) * qp->m_baseRtt < Simulator::Now() || qp->m_size / m_mtu == qp->snd_done)
@@ -185,7 +186,7 @@ namespace ns3
     {
         Ptr<MpRdmaQueuePair> qp = GetQp(ch.sip, ch.ack.sport, ch.udp.pg);
         uint32_t nic_idx = GetNicIdxOfQp(qp);
-        Ptr<QbbNetDevice> dev = m_nic[nic_idx].dev;
+        Ptr<MpQbbNetDevice> dev = m_nic[nic_idx].dev;
 
         uint8_t cnp = (ch.ack.flags >> qbbHeader::FLAG_CNP) & 1;
         if (cnp)
@@ -235,12 +236,12 @@ namespace ns3
         else if (ch.l3Prot == 0xFC)
         { // ACK
             uint32_t awnd = qp->m_cwnd - ((qp->snd_nxt - qp->snd_una) - qp->m_inflate);
-            if (qp->GetPacketsLeft(dev->GetMtu()) == 0)
+            if (qp->GetPacketsLeft() == 0)
             { // if there is no packet to send, do path window redution
                 qp->m_cwnd = std::max(qp->m_cwnd - 1, 1.0);
                 return 0;
             }
-            uint8_t numSend = std::min(std::min(awnd, 2u), qp->GetPacketsLeft(dev->GetMtu()));
+            uint8_t numSend = std::min(std::min(awnd, 2u), qp->GetPacketsLeft());
             qp->m_vpQueue.push({ch.ack.dport, numSend, 0});
         }
 
@@ -321,7 +322,7 @@ namespace ns3
                                 uint32_t win, uint32_t baseRtt, Callback<void> notifyAppFinish)
     {
         // create qp
-        Ptr<MpRdmaQueuePair> qp = CreateObject<MpRdmaQueuePair>(pg, sip, dip, sport, dport);
+        Ptr<MpRdmaQueuePair> qp = CreateObject<MpRdmaQueuePair>(pg, sip, dip, sport, dport, m_mtu);
         qp->SetSize(size);
         qp->SetBaseRtt(baseRtt);
         qp->SetAppNotifyCallback(notifyAppFinish);

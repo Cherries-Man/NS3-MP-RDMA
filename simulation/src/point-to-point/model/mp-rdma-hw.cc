@@ -9,6 +9,7 @@
 #include <algorithm>
 #include "rocev2-ack-header.h"
 #include "mp-qbb-net-device.h"
+#include <ns3/uinteger.h>
 
 namespace ns3
 {
@@ -17,7 +18,11 @@ namespace ns3
     {
         static TypeId tid = TypeId("ns3::MpRdmaHw")
                                 .SetParent<Object>()
-                                .AddConstructor<MpRdmaHw>();
+                                .AddAttribute("Mtu",
+                                              "Mtu.",
+                                              UintegerValue(1000),
+                                              MakeUintegerAccessor(&MpRdmaHw::m_mtu),
+                                              MakeUintegerChecker<uint32_t>());
         return tid;
     }
 
@@ -108,6 +113,7 @@ namespace ns3
 
         // update state
         qp->m_ipid++;
+        qp->snd_nxt++;
 
         return p;
     }

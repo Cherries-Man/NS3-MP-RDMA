@@ -13,6 +13,9 @@
 
 namespace ns3
 {
+#ifdef PRINT_LOG
+#undef PRINT_LOG
+#endif
 #define PRINT_LOG 1
     // 注册类型
     TypeId MpRdmaHw::GetTypeId(void)
@@ -59,7 +62,7 @@ namespace ns3
             // normal mode
             uint32_t payload_size = qp->GetPacketsLeft() == 1 ? qp->GetBytesLeft() : m_mtu;
             p = Create<Packet>(payload_size);
-            // set synchronise and ReTx
+            // if time arrive or meet the last packet, set synchronise and ReTx
             if (qp->m_lastSyncTime + m_alpha * (m_delta / qp->m_cwnd) * qp->m_baseRtt < Simulator::Now() || qp->m_size / m_mtu == qp->snd_done)
             {
                 rocev2.SetSynchronise(1);
@@ -78,6 +81,9 @@ namespace ns3
         }
         else
         {
+#if PRINT_LOG
+            std::cout << "Unknown mode" << std::endl;
+#endif
         }
         seqTs.SetPG(qp->m_pg);
 
@@ -152,6 +158,8 @@ namespace ns3
         uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
         RoCEv2AckHeader roCEv2AckH;
         qbbHeader seqh;
+        Ipv4Header head;
+
         seqh.SetSeq(ch.udp.seq);
         seqh.SetPG(ch.udp.pg);
         seqh.SetSport(ch.udp.dport);
@@ -161,7 +169,7 @@ namespace ns3
         {
             seqh.SetCnp();
         }
-        Ipv4Header head;
+
         head.SetDestination(Ipv4Address(ch.sip));
         head.SetSource(Ipv4Address(ch.dip));
         Ptr<Packet> newp = Create<Packet>(std::max(60 - 14 - 20 -
@@ -253,6 +261,12 @@ namespace ns3
             }
             uint8_t numSend = std::min(std::min(awnd, 2u), qp->GetPacketsLeft());
             qp->m_vpQueue.push({ch.ack.dport, numSend, 0});
+        }
+        else
+        {
+#if PRINT_LOG
+            std::cout << "Received packets other than ACK & NACK" << std::endl;
+#endif
         }
 
         return 0;

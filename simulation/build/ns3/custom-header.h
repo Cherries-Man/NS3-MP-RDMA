@@ -67,7 +67,7 @@ namespace ns3
     {
       L2_Header = 1,
       L3_Header = 2,
-      L4_Header = 4,
+      L4_Header = 4
     };
 
     // ppp header

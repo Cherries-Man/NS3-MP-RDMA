@@ -9,35 +9,37 @@
 #include <vector>
 #include <unordered_map>
 
-namespace ns3 {
+namespace ns3
+{
 
-class RdmaDriver : public Object {
-public:
-	Ptr<Node> m_node;
-	Ptr<RdmaHw> m_rdma;
+	class RdmaDriver : public Object
+	{
+	public:
+		Ptr<Node> m_node;
+		Ptr<RdmaHw> m_rdma;
 
-	// trace
-	TracedCallback<Ptr<RdmaQueuePair> > m_traceQpComplete;
+		// trace
+		TracedCallback<Ptr<RdmaQueuePair>> m_traceQpComplete;
 
-	static TypeId GetTypeId (void);
-	RdmaDriver();
+		static TypeId GetTypeId(void);
+		RdmaDriver();
 
-	// This function init the m_nic according to the NetDevice
-	// So this must be called after all NICs are installed
-	void Init(void);
+		// This function init the m_nic according to the NetDevice
+		// So this must be called after all NICs are installed
+		void Init(void);
 
-	// Set Node
-	void SetNode(Ptr<Node> node);
+		// Set Node
+		void SetNode(Ptr<Node> node);
 
-	// Set RdmaHw
-	void SetRdmaHw(Ptr<RdmaHw> rdma);
+		// Set RdmaHw
+		void SetRdmaHw(Ptr<RdmaHw> rdma);
 
-	// add a queue pair
-	void AddQueuePair(uint64_t size, uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport, uint32_t win, uint64_t baseRtt, Callback<void> notifyAppFinish);
+		// add a queue pair
+		void AddQueuePair(uint64_t size, uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport, uint32_t win, uint64_t baseRtt, Callback<void> notifyAppFinish);
 
-	// callback when qp completes
-	void QpComplete(Ptr<RdmaQueuePair> q);
-};
+		// callback when qp completes
+		void QpComplete(Ptr<RdmaQueuePair> q);
+	};
 
 } // namespace ns3
 

@@ -37,7 +37,27 @@ namespace ns3
         srand(1000);
     }
 
-    Ptr<Packet> MpRdmaHw::GetNextPacket(Ptr<MpRdmaQueuePair> qp)
+    void MpRdmaHw::Setup(QpCompleteCallback cb)
+    {
+        for (uint32_t i = 0; i < m_nic.size(); i++)
+        {
+            Ptr<MpQbbNetDevice> dev = m_nic[i].dev;
+            if (dev == NULL)
+                continue;
+            // share data with NIC
+            dev->m_rdmaEQ->m_qpGrp = m_nic[i].qpGrp;
+            // setup callback
+            dev->m_rdmaReceiveCb = MakeCallback(&MpRdmaHw::Receive, this);
+            dev->m_rdmaLinkDownCb = MakeCallback(&MpRdmaHw::SetLinkDown, this);
+            dev->m_rdmaPktSent = MakeCallback(&MpRdmaHw::PktSent, this);
+            // config NIC
+            dev->m_rdmaEQ->m_rdmaGetNxtPkt = MakeCallback(&MpRdmaHw::GetNxtPacket, this);
+        }
+        // setup qp complete callback
+        m_qpCompleteCallback = cb;
+    }
+
+    Ptr<Packet> MpRdmaHw::GetNxtPacket(Ptr<MpRdmaQueuePair> qp)
     {
         // return null if no more packets to send
         if (qp->m_vpQueue.empty())
@@ -437,6 +457,11 @@ namespace ns3
             NS_ASSERT_MSG(false, "PPP Protocol number not defined!");
         }
         return 0;
+    }
+
+    void MpRdmaHw::SetLinkDown(Ptr<MpQbbNetDevice> dev)
+    {
+        printf("RdmaHw: node:%u a link down\n", m_node->GetId());
     }
 
 } /* namespace ns3 */

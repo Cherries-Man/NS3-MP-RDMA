@@ -27,7 +27,7 @@ namespace ns3
         // Constructor
         MpRdmaHw();
         TypeId GetTypeId(void);
-        Ptr<Packet> GetNextPacket(Ptr<MpRdmaQueuePair> qp);
+        Ptr<Packet> GetNxtPacket(Ptr<MpRdmaQueuePair> qp);
         void PktSent(Ptr<MpRdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap);
         void UpdateNextAvail(Ptr<MpRdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size);
         int ReceiveUdp(Ptr<Packet> p, CustomHeader &ch);
@@ -52,6 +52,7 @@ namespace ns3
 
         void AddHeader(Ptr<Packet> p, uint16_t protocolNumber);
         uint16_t EtherToPpp(uint16_t proto);
+        void SetLinkDown(Ptr<MpQbbNetDevice> dev);
 
         /**
          * set hyper parameters about MP-RDMA-HW

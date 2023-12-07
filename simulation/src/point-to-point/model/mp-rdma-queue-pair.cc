@@ -26,7 +26,8 @@ namespace ns3
           sport(_sport),
           dport(_dport),
           m_nextAvail(Time(0)),
-          m_mtu(_mtu)
+          m_mtu(_mtu),
+          m_rate(0)
 
     {
         // generate new virtual path

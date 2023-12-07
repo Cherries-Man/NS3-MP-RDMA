@@ -52,6 +52,7 @@ namespace ns3
         Callback<void> m_notifyAppFinish;
         Time m_nextAvail; // Soonest time of next send
         uint32_t m_mtu;   // Maximum Transmission Unit (MTU) of the Queue Pair
+        DataRate m_rate;  // Current rate
     };
 
     class MpRdmaRxQueuePair : public Object

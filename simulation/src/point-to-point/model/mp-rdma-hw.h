@@ -11,11 +11,11 @@ namespace ns3
 {
     struct MpRdmaInterfaceMgr
     {
-        Ptr<QbbNetDevice> dev;
+        Ptr<MpQbbNetDevice> dev;
         Ptr<MpRdmaQueuePairGroup> qpGrp;
 
         MpRdmaInterfaceMgr() : dev(NULL), qpGrp(NULL) {}
-        MpRdmaInterfaceMgr(Ptr<QbbNetDevice> _dev)
+        MpRdmaInterfaceMgr(Ptr<MpQbbNetDevice> _dev)
         {
             dev = _dev;
         }
@@ -28,6 +28,8 @@ namespace ns3
         MpRdmaHw();
         TypeId GetTypeId(void);
         Ptr<Packet> GetNextPacket(Ptr<MpRdmaQueuePair> qp);
+        void PktSent(Ptr<MpRdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap);
+        void UpdateNextAvail(Ptr<MpRdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size);
         int ReceiveUdp(Ptr<Packet> p, CustomHeader &ch);
         int ReceiveAck(Ptr<Packet> p, CustomHeader &ch);
         int Receive(Ptr<Packet> p, CustomHeader &ch);

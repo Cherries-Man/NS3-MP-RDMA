@@ -200,6 +200,17 @@ namespace ns3
         return 0;
     }
 
+    void PktSent(Ptr<MpRdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap)
+    {
+        UpdateNextAvail(qp, interframeGap, pkt->GetSize());
+    }
+
+    void UpdateNextAvail(Ptr<MpRdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size)
+    {
+        Time sendingTime = interframeGap + Seconds(pkt_size * 8.0 / qp->m_rate.GetBitRate());
+        qp->m_nextAvail = Simulator::Now() + sendingTime;
+    }
+
     int MpRdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch)
     {
         Ptr<MpRdmaQueuePair> qp = GetQp(ch.sip, ch.ack.sport, ch.udp.pg);
@@ -380,8 +391,8 @@ namespace ns3
         m_MpQpMap[GetQpKey(dip.Get(), dport, pg)] = qp;
 
         // set init variables
-        // DataRate m_bps = m_nic[nic_idx].dev->GetDataRate();
-        // qp->m_rate = m_bps;
+        DataRate m_bps = m_nic[nic_idx].dev->GetDataRate();
+        qp->m_rate = m_bps;
     }
 
     uint32_t MpRdmaHw::GetNicIdxOfQp(Ptr<MpRdmaQueuePair> qp)

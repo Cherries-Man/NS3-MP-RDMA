@@ -13,6 +13,7 @@
 
 namespace ns3
 {
+#define PRINT_LOG 1
     // 注册类型
     TypeId MpRdmaHw::GetTypeId(void)
     {
@@ -74,6 +75,9 @@ namespace ns3
             // recovery mode
             rocev2.SetReTx(1);
             seqTs.SetSeq(qp->snd_retx);
+        }
+        else
+        {
         }
         seqTs.SetPG(qp->m_pg);
 
@@ -251,6 +255,29 @@ namespace ns3
             qp->m_vpQueue.push({ch.ack.dport, numSend, 0});
         }
 
+        return 0;
+    }
+
+    int MpRdmaHw::Receive(Ptr<Packet> p, CustomHeader &ch)
+    {
+        if (ch.l3Prot == 0x11)
+        {
+            // UDP
+            ReceiveUdp(p, ch);
+        }
+        else if (ch.l3Prot == 0xFC || ch.l3Prot == 0xFD)
+        {
+            // ACK & NACK
+            ReceiveAck(p, ch);
+        }
+        else
+        {
+// other protocol packet
+#if PRINT_LOG
+            std::cout << "Receive other protocol packet" << std::endl;
+#endif
+            return 1;
+        }
         return 0;
     }
 

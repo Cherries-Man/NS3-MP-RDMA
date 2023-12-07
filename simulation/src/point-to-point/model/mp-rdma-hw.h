@@ -30,6 +30,7 @@ namespace ns3
         Ptr<Packet> GetNextPacket(Ptr<MpRdmaQueuePair> qp);
         int ReceiveUdp(Ptr<Packet> p, CustomHeader &ch);
         int ReceiveAck(Ptr<Packet> p, CustomHeader &ch);
+        int Receive(Ptr<Packet> p, CustomHeader &ch);
         bool doSynch(Ptr<MpRdmaRxQueuePair> rxMpQp);
         void moveRcvWnd(Ptr<MpRdmaRxQueuePair> rxMpQp, uint32_t distance);
         Ptr<MpRdmaQueuePair> GetQp(uint32_t dip, uint16_t sport, uint16_t pg);

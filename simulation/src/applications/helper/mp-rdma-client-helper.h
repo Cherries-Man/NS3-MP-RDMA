@@ -6,7 +6,7 @@
 #include "ns3/node-container.h"
 #include "ns3/object-factory.h"
 #include "ns3/ipv4-address.h"
-#include "mp-rdma-client.h"
+#include <ns3/mp-rdma-client.h>
 
 namespace ns3
 {

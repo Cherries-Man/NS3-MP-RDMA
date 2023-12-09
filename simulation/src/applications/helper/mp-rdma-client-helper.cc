@@ -1,5 +1,5 @@
-#include "mp-rdma-client-helper.h"
-#include "mp-rdma-client.h"
+#include "ns3/mp-rdma-client-helper.h"
+#include "ns3/mp-rdma-client.h"
 #include "ns3/uinteger.h"
 #include "ns3/string.h"
 

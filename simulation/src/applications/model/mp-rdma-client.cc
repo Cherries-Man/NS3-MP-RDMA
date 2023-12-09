@@ -9,11 +9,11 @@
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
 #include "ns3/random-variable.h"
-#include "mp-qbb-net-device.h"
+#include "ns3/mp-qbb-net-device.h"
 #include "ns3/ipv4-end-point.h"
-#include "mp-rdma-client.h"
+#include "ns3/mp-rdma-client.h"
 #include "ns3/seq-ts-header.h"
-#include "mp-rdma-driver.h"
+#include "ns3/mp-rdma-driver.h"
 #include <stdlib.h>
 #include <stdio.h>
 

@@ -9,7 +9,8 @@ namespace ns3
     {
         static TypeId tid = TypeId("ns3::MpRdmaDriver")
                                 .SetParent<Object>()
-                                .AddTraceSource("QpComplete", "A qp completes.",
+                                .AddTraceSource("QpComplete",
+                                                "A qp completes.",
                                                 MakeTraceSourceAccessor(&MpRdmaDriver::m_traceQpComplete));
         return tid;
     }

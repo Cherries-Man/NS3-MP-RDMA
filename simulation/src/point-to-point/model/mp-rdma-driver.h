@@ -4,8 +4,8 @@
 #include <ns3/node.h>
 #include <ns3/qbb-net-device.h>
 #include <ns3/rdma.h>
-#include "mp-rdma-queue-pair.h"
-#include "mp-rdma-hw.h"
+#include <ns3/mp-rdma-queue-pair.h>
+#include <ns3/mp-rdma-hw.h>
 
 namespace ns3
 {

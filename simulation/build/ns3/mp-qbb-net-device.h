@@ -8,7 +8,7 @@
 #include "ns3/ipv4.h"
 #include "ns3/ipv4-header.h"
 #include "ns3/udp-header.h"
-#include "mp-rdma-queue-pair.h"
+#include <ns3/mp-rdma-queue-pair.h>
 #include <vector>
 #include <map>
 #include <ns3/rdma.h>

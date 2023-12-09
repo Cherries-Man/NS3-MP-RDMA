@@ -1,5 +1,9 @@
 #include <queue>
 #include <vector>
+#include <ns3/object.h>
+#include <ns3/ipv4-address.h>
+#include <ns3/timer.h>
+#include <ns3/data-rate.h>
 
 namespace ns3
 {
@@ -53,6 +57,7 @@ namespace ns3
         Time m_nextAvail; // Soonest time of next send
         uint32_t m_mtu;   // Maximum Transmission Unit (MTU) of the Queue Pair
         DataRate m_rate;  // Current rate
+        Time startTime;   // flow start time
     };
 
     class MpRdmaRxQueuePair : public Object

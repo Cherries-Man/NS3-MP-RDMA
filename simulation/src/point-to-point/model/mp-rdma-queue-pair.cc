@@ -27,7 +27,8 @@ namespace ns3
           dport(_dport),
           m_nextAvail(Time(0)),
           m_mtu(_mtu),
-          m_rate(0)
+          m_rate(0),
+          startTime(Simulator::Now())
 
     {
         // generate new virtual path

@@ -1,5 +1,5 @@
-#ifndef QBB_CHANNEL_H
-#define QBB_CHANNEL_H
+#ifndef MP_QBB_CHANNEL_H
+#define MP_QBB_CHANNEL_H
 
 #include <list>
 #include "ns3/channel.h"

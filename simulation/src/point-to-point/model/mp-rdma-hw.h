@@ -2,10 +2,11 @@
 #ifndef MP_RDMA_HW_H
 #define MP_RDMA_HW_H
 
-#include "rdma-hw.h"
+#include <unordered_map>
 #include <queue>
 #include <vector>
-#include "mp-rdma-queue-pair.h"
+#include <ns3/mp-rdma-queue-pair.h>
+#include <ns3/mp-qbb-net-device.h>
 
 namespace ns3
 {
@@ -26,7 +27,7 @@ namespace ns3
     public:
         // Constructor
         MpRdmaHw();
-        TypeId GetTypeId(void);
+        static TypeId GetTypeId(void);
         Ptr<Packet> GetNxtPacket(Ptr<MpRdmaQueuePair> qp);
         void PktSent(Ptr<MpRdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap);
         void UpdateNextAvail(Ptr<MpRdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size);
@@ -54,6 +55,13 @@ namespace ns3
         uint16_t EtherToPpp(uint16_t proto);
         void SetLinkDown(Ptr<MpQbbNetDevice> dev);
 
+        void QpComplete(Ptr<MpRdmaQueuePair> qp);
+        void DeleteQueuePair(Ptr<MpRdmaQueuePair> qp);
+        void DeleteRxQp(uint32_t dip, uint16_t dport, uint16_t pg);
+        void AddTableEntry(Ipv4Address &dstAddr, uint32_t intf_idx);
+        void ClearTable();
+        void RedistributeQp();
+
         /**
          * set hyper parameters about MP-RDMA-HW
          */
@@ -61,7 +69,7 @@ namespace ns3
         uint32_t m_delta = 32; // out of order degree parameter
 
         std::unordered_map<uint64_t, Ptr<MpRdmaRxQueuePair>> m_rxMpQpMap; // mapping from uint64_t to rx qp
-        std::unordered_map<uint64_t, Ptr<MpRdmaQueuePair>> m_MpQpMap;     // mapping from uint64_t to qp
+        std::unordered_map<uint64_t, Ptr<MpRdmaQueuePair>> m_mpQpMap;     // mapping from uint64_t to qp
         std::unordered_map<uint32_t, std::vector<int>> m_rtTable;         // map from ip address (u32) to possible ECMP port (index of dev)
         std::vector<MpRdmaInterfaceMgr> m_nic;                            // list of running nic controlled by this MpRdmaHw
         Ptr<Node> m_node;

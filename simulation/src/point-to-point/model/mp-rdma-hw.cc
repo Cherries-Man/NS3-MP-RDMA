@@ -355,8 +355,8 @@ namespace ns3
 
     Ptr<MpRdmaQueuePair> MpRdmaHw::GetQp(uint32_t dip, uint16_t dport, uint16_t pg)
     {
-        auto it = m_MpQpMap.find(GetQpKey(dip, dport, pg));
-        if (it != m_MpQpMap.end())
+        auto it = m_mpQpMap.find(GetQpKey(dip, dport, pg));
+        if (it != m_mpQpMap.end())
             return it->second;
         return NULL;
     }
@@ -408,7 +408,7 @@ namespace ns3
         // add qp
         uint32_t nic_idx = GetNicIdxOfQp(qp);
         m_nic[nic_idx].qpGrp->AddQp(qp);
-        m_MpQpMap[GetQpKey(dip.Get(), dport, pg)] = qp;
+        m_mpQpMap[GetQpKey(dip.Get(), dport, pg)] = qp;
 
         // set init variables
         DataRate m_bps = m_nic[nic_idx].dev->GetDataRate();
@@ -462,6 +462,63 @@ namespace ns3
     void MpRdmaHw::SetLinkDown(Ptr<MpQbbNetDevice> dev)
     {
         printf("RdmaHw: node:%u a link down\n", m_node->GetId());
+    }
+
+    void MpRdmaHw::QpComplete(Ptr<MpRdmaQueuePair> qp)
+    {
+        NS_ASSERT(!m_qpCompleteCallback.IsNull());
+
+        // This callback will log info
+        // It may also delete the rxQp on the receiver
+        m_qpCompleteCallback(qp);
+
+        // delete the qp
+        DeleteQueuePair(qp);
+    }
+
+    void MpRdmaHw::DeleteQueuePair(Ptr<MpRdmaQueuePair> qp)
+    {
+        // remove qp from the m_qpMap
+        uint64_t key = GetQpKey(qp->dip.Get(), qp->dport, qp->m_pg);
+        m_mpQpMap.erase(key);
+    }
+
+    void MpRdmaHw::DeleteRxQp(uint32_t dip, uint16_t dport, uint16_t pg)
+    {
+        uint64_t key = GetQpKey(dip, dport, pg);
+        m_rxMpQpMap.erase(key);
+    }
+
+    void MpRdmaHw::AddTableEntry(Ipv4Address &dstAddr, uint32_t intf_idx)
+    {
+        uint32_t dip = dstAddr.Get();
+        m_rtTable[dip].push_back(intf_idx);
+    }
+
+    void MpRdmaHw::ClearTable()
+    {
+        m_rtTable.clear();
+    }
+
+    void MpRdmaHw::RedistributeQp()
+    {
+        // clear old qpGrp
+        for (uint32_t i = 0; i < m_nic.size(); i++)
+        {
+            if (m_nic[i].dev == NULL)
+                continue;
+            m_nic[i].qpGrp->Clear();
+        }
+
+        // redistribute qp
+        for (auto &it : m_mpQpMap)
+        {
+            Ptr<MpRdmaQueuePair> qp = it.second;
+            uint32_t nic_idx = GetNicIdxOfQp(qp);
+            m_nic[nic_idx].qpGrp->AddQp(qp);
+            // Notify Nic
+            m_nic[nic_idx].dev->ReassignedQp(qp);
+        }
     }
 
 } /* namespace ns3 */

@@ -1,6 +1,6 @@
 # MP-RDMA NS-3 simulator
 
-This is a MP-RDMA NS-3 simulator based on the HPCC implementation for simulating the performance of MP-RDMA(Multi-Path RDMA).
+This is a MP-RDMA NS-3 simulator based on the [HPCC: https://hpcc-group.github.io/](https://hpcc-group.github.io/) implementation for simulating the performance of MP-RDMA(Multi-Path RDMA).
 
 ## Build
 

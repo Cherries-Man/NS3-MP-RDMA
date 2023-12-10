@@ -187,7 +187,7 @@ void qp_finish(FILE *fout, Ptr<MpRdmaQueuePair> q)
 	rdma->m_rdma->DeleteRxQp(q->sip.Get(), q->m_pg, q->sport);
 }
 
-void get_pfc(FILE *fout, Ptr<QbbNetDevice> dev, uint32_t type)
+void get_pfc(FILE *fout, Ptr<MpQbbNetDevice> dev, uint32_t type)
 {
 	fprintf(fout, "%lu %u %u %u %u\n", Simulator::Now().GetTimeStep(), dev->GetNode()->GetId(), dev->GetNode()->GetNodeType(), dev->GetIfIndex(), type);
 }
@@ -350,8 +350,8 @@ void TakeDownLink(NodeContainer n, Ptr<Node> a, Ptr<Node> b)
 		else
 			n.Get(i)->GetObject<MpRdmaDriver>()->m_rdma->ClearTable();
 	}
-	DynamicCast<QbbNetDevice>(a->GetDevice(nbr2if[a][b].idx))->TakeDown();
-	DynamicCast<QbbNetDevice>(b->GetDevice(nbr2if[b][a].idx))->TakeDown();
+	DynamicCast<MpQbbNetDevice>(a->GetDevice(nbr2if[a][b].idx))->TakeDown();
+	DynamicCast<MpQbbNetDevice>(b->GetDevice(nbr2if[b][a].idx))->TakeDown();
 	// reset routing table
 	SetRoutingEntries();
 
@@ -367,7 +367,7 @@ uint64_t get_nic_rate(NodeContainer &n)
 {
 	for (uint32_t i = 0; i < n.GetN(); i++)
 		if (n.Get(i)->GetNodeType() == 0)
-			return DynamicCast<QbbNetDevice>(n.Get(i)->GetDevice(1))->GetDataRate().GetBitRate();
+			return DynamicCast<MpQbbNetDevice>(n.Get(i)->GetDevice(1))->GetDataRate().GetBitRate();
 }
 
 int main(int argc, char *argv[])
@@ -777,9 +777,9 @@ int main(int argc, char *argv[])
 	bool dynamicth = use_dynamic_pfc_threshold;
 
 	// 为与 QbbNetDevice 相关的仿真参数设置默认值
-	Config::SetDefault("ns3::QbbNetDevice::PauseTime", UintegerValue(pause_time));
-	Config::SetDefault("ns3::QbbNetDevice::QcnEnabled", BooleanValue(enable_qcn));
-	Config::SetDefault("ns3::QbbNetDevice::DynamicThreshold", BooleanValue(dynamicth));
+	Config::SetDefault("ns3::MpQbbNetDevice::PauseTime", UintegerValue(pause_time));
+	Config::SetDefault("ns3::MpQbbNetDevice::QcnEnabled", BooleanValue(enable_qcn));
+	Config::SetDefault("ns3::MpQbbNetDevice::DynamicThreshold", BooleanValue(dynamicth));
 
 	// set int_multi
 	IntHop::multi = int_multi;
@@ -923,14 +923,14 @@ int main(int argc, char *argv[])
 		}
 
 		// used to create a graph of the topology
-		nbr2if[snode][dnode].idx = DynamicCast<QbbNetDevice>(d.Get(0))->GetIfIndex();
+		nbr2if[snode][dnode].idx = DynamicCast<MpQbbNetDevice>(d.Get(0))->GetIfIndex();
 		nbr2if[snode][dnode].up = true;
-		nbr2if[snode][dnode].delay = DynamicCast<QbbChannel>(DynamicCast<QbbNetDevice>(d.Get(0))->GetChannel())->GetDelay().GetTimeStep();
-		nbr2if[snode][dnode].bw = DynamicCast<QbbNetDevice>(d.Get(0))->GetDataRate().GetBitRate();
-		nbr2if[dnode][snode].idx = DynamicCast<QbbNetDevice>(d.Get(1))->GetIfIndex();
+		nbr2if[snode][dnode].delay = DynamicCast<QbbChannel>(DynamicCast<MpQbbNetDevice>(d.Get(0))->GetChannel())->GetDelay().GetTimeStep();
+		nbr2if[snode][dnode].bw = DynamicCast<MpQbbNetDevice>(d.Get(0))->GetDataRate().GetBitRate();
+		nbr2if[dnode][snode].idx = DynamicCast<MpQbbNetDevice>(d.Get(1))->GetIfIndex();
 		nbr2if[dnode][snode].up = true;
-		nbr2if[dnode][snode].delay = DynamicCast<QbbChannel>(DynamicCast<QbbNetDevice>(d.Get(1))->GetChannel())->GetDelay().GetTimeStep();
-		nbr2if[dnode][snode].bw = DynamicCast<QbbNetDevice>(d.Get(1))->GetDataRate().GetBitRate();
+		nbr2if[dnode][snode].delay = DynamicCast<MpQbbChannel>(DynamicCast<MpQbbNetDevice>(d.Get(1))->GetChannel())->GetDelay().GetTimeStep();
+		nbr2if[dnode][snode].bw = DynamicCast<MpQbbNetDevice>(d.Get(1))->GetDataRate().GetBitRate();
 
 		// This is just to set up the connectivity between nodes. The IP addresses are useless
 		char ipstring[16];
@@ -939,8 +939,8 @@ int main(int argc, char *argv[])
 		ipv4.Assign(d);
 
 		// setup PFC trace
-		DynamicCast<QbbNetDevice>(d.Get(0))->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback(&get_pfc, pfc_file, DynamicCast<QbbNetDevice>(d.Get(0))));
-		DynamicCast<QbbNetDevice>(d.Get(1))->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback(&get_pfc, pfc_file, DynamicCast<QbbNetDevice>(d.Get(1))));
+		DynamicCast<MpQbbNetDevice>(d.Get(0))->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback(&get_pfc, pfc_file, DynamicCast<MpQbbNetDevice>(d.Get(0))));
+		DynamicCast<MpQbbNetDevice>(d.Get(1))->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback(&get_pfc, pfc_file, DynamicCast<MpQbbNetDevice>(d.Get(1))));
 	}
 
 	nic_rate = get_nic_rate(n);
@@ -954,7 +954,7 @@ int main(int argc, char *argv[])
 			uint32_t shift = 3; // by default 1/8
 			for (uint32_t j = 1; j < sw->GetNDevices(); j++)
 			{
-				Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(sw->GetDevice(j));
+				Ptr<MpQbbNetDevice> dev = DynamicCast<MpQbbNetDevice>(sw->GetDevice(j));
 				// set ecn
 				uint64_t rate = dev->GetDataRate().GetBitRate();
 				NS_ASSERT_MSG(rate2kmin.find(rate) != rate2kmin.end(), "must set kmin for each link speed");
@@ -1106,7 +1106,7 @@ int main(int argc, char *argv[])
 			{
 				uint16_t node = i.first->GetId();
 				uint8_t intf = j.second.idx;
-				uint64_t bps = DynamicCast<QbbNetDevice>(i.first->GetDevice(j.second.idx))->GetDataRate().GetBitRate();
+				uint64_t bps = DynamicCast<MpQbbNetDevice>(i.first->GetDevice(j.second.idx))->GetDataRate().GetBitRate();
 				sim_setting.port_speed[node][intf] = bps;
 			}
 		}

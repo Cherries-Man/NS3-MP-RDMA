@@ -22,7 +22,7 @@
 #include <unordered_map>
 #include <time.h>
 #include "ns3/core-module.h"
-#include "ns3/qbb-helper.h"
+#include "ns3/mp-qbb-helper.h"
 #include "ns3/point-to-point-helper.h"
 #include "ns3/applications-module.h"
 #include "ns3/internet-module.h"
@@ -870,7 +870,7 @@ int main(int argc, char *argv[])
 
 	FILE *pfc_file = fopen(pfc_output_file.c_str(), "w");
 
-	QbbHelper qbb;
+	MpQbbHelper mpQbb;
 	Ipv4AddressHelper ipv4;
 	//
 	// set link attribute
@@ -884,8 +884,8 @@ int main(int argc, char *argv[])
 
 		Ptr<Node> snode = n.Get(src), dnode = n.Get(dst);
 
-		qbb.SetDeviceAttribute("DataRate", StringValue(data_rate));
-		qbb.SetChannelAttribute("Delay", StringValue(link_delay));
+		mpQbb.SetDeviceAttribute("DataRate", StringValue(data_rate));
+		mpQbb.SetChannelAttribute("Delay", StringValue(link_delay));
 
 		if (error_rate > 0)
 		{
@@ -895,11 +895,11 @@ int main(int argc, char *argv[])
 			uv->SetStream(50);
 			rem->SetAttribute("ErrorRate", DoubleValue(error_rate));
 			rem->SetAttribute("ErrorUnit", StringValue("ERROR_UNIT_PACKET"));
-			qbb.SetDeviceAttribute("ReceiveErrorModel", PointerValue(rem));
+			mpQbb.SetDeviceAttribute("ReceiveErrorModel", PointerValue(rem));
 		}
 		else
 		{
-			qbb.SetDeviceAttribute("ReceiveErrorModel", PointerValue(rem));
+			mpQbb.SetDeviceAttribute("ReceiveErrorModel", PointerValue(rem));
 		}
 
 		fflush(stdout);
@@ -908,7 +908,7 @@ int main(int argc, char *argv[])
 		// Note: this should be before the automatic assignment below (ipv4.Assign(d)),
 		// because we want our IP to be the primary IP (first in the IP address list),
 		// so that the global routing is based on our IP
-		NetDeviceContainer d = qbb.Install(snode, dnode);
+		NetDeviceContainer d = mpQbb.Install(snode, dnode);
 		if (snode->GetNodeType() == 0)
 		{
 			Ptr<Ipv4> ipv4 = snode->GetObject<Ipv4>();
@@ -925,7 +925,7 @@ int main(int argc, char *argv[])
 		// used to create a graph of the topology
 		nbr2if[snode][dnode].idx = DynamicCast<MpQbbNetDevice>(d.Get(0))->GetIfIndex();
 		nbr2if[snode][dnode].up = true;
-		nbr2if[snode][dnode].delay = DynamicCast<QbbChannel>(DynamicCast<MpQbbNetDevice>(d.Get(0))->GetChannel())->GetDelay().GetTimeStep();
+		nbr2if[snode][dnode].delay = DynamicCast<MpQbbChannel>(DynamicCast<MpQbbNetDevice>(d.Get(0))->GetChannel())->GetDelay().GetTimeStep();
 		nbr2if[snode][dnode].bw = DynamicCast<MpQbbNetDevice>(d.Get(0))->GetDataRate().GetBitRate();
 		nbr2if[dnode][snode].idx = DynamicCast<MpQbbNetDevice>(d.Get(1))->GetIfIndex();
 		nbr2if[dnode][snode].up = true;
@@ -962,7 +962,7 @@ int main(int argc, char *argv[])
 				NS_ASSERT_MSG(rate2pmax.find(rate) != rate2pmax.end(), "must set pmax for each link speed");
 				sw->m_mmu->ConfigEcn(j, rate2kmin[rate], rate2kmax[rate], rate2pmax[rate]);
 				// set pfc
-				uint64_t delay = DynamicCast<QbbChannel>(dev->GetChannel())->GetDelay().GetTimeStep();
+				uint64_t delay = DynamicCast<MpQbbChannel>(dev->GetChannel())->GetDelay().GetTimeStep();
 				uint32_t headroom = rate * delay / 8 / 1000000000 * 3;
 				sw->m_mmu->ConfigHdrm(j, headroom);
 
@@ -1095,7 +1095,7 @@ int main(int argc, char *argv[])
 
 	FILE *trace_output = fopen(trace_output_file.c_str(), "w");
 	if (enable_trace)
-		qbb.EnableTracing(trace_output, trace_nodes);
+		mpQbb.EnableTracing(trace_output, trace_nodes);
 
 	// dump link speed to trace file
 	{

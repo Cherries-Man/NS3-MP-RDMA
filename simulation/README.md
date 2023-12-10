@@ -32,15 +32,15 @@ The direct command to run is:
 
 ## Files added/edited based on NS3
 
-`internet/model/rocev2-data-header.cc/h`: the header of RDMA data packet
-`internet/model/rocev2-ack-header.cc/h`: the header of RDMA ACK packet
-`point-to-point/helper/mp-qbb-helper.cc/h`: the helper class for MP-QBB
-`point-to-point/model/mp-qbb-channel.cc/h`: the channel of MP-QBB
-`point-to-point/model/mp-qbb-net-device.cc/h`: the net-device of MP-RDMA
-`point-to-point/model/mp-qbb-remote-channel.cc/h`: the remote channel of MP-QBB
-`point-to-point/model/mp-rdma-driver.cc/h`: layer of assigning qp and manage multiple NICs
-`point-to-point/model/mp-rdma-hw.cc/h`: the core logic of MP-RDMA
-`point-to-point/model/mp-rdma-queue-pair.cc/h`: the queue pair for MP-RDMA
-`applications/helper/mp-rdma-client-helper.cc/h`: the helper class for MP-RDMA client
-`applications/model/mp-rdma-client.cc/h`: the client of MP-RDMA
-`network/utils/custom-header.cc/h`: a customized header class for speeding up header parsing
+- `internet/model/rocev2-data-header.cc/h`: the header of RDMA data packet
+- `internet/model/rocev2-ack-header.cc/h`: the header of RDMA ACK packet
+- `point-to-point/helper/mp-qbb-helper.cc/h`: the helper class for MP-QBB
+- `point-to-point/model/mp-qbb-channel.cc/h`: the channel of MP-QBB
+- `point-to-point/model/mp-qbb-net-device.cc/h`: the net-device of MP-RDMA
+- `point-to-point/model/mp-qbb-remote-channel.cc/h`: the remote channel of MP-QBB
+- `point-to-point/model/mp-rdma-driver.cc/h`: layer of assigning qp and manage multiple NICs
+- `point-to-point/model/mp-rdma-hw.cc/h`: the core logic of MP-RDMA
+- `point-to-point/model/mp-rdma-queue-pair.cc/h`: the queue pair for MP-RDMA
+- `applications/helper/mp-rdma-client-helper.cc/h`: the helper class for MP-RDMA client
+- `applications/model/mp-rdma-client.cc/h`: the client of MP-RDMA
+- `network/utils/custom-header.cc/h`: a customized header class for speeding up header parsing

@@ -26,6 +26,9 @@ def build(bld):
         'model/mp-rdma-driver.cc',
         'model/mp-rdma-hw.cc',
         'model/mp-rdma-queue-pair.cc',
+        'model/mp-qbb-net-device.cc',
+        'model/mp-qbb-channel.cc',
+        'model/mp-qbb-remote-channel.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('point-to-point')
@@ -60,6 +63,9 @@ def build(bld):
         'model/mp-rdma-driver.h',
         'model/mp-rdma-hw.h',
         'model/mp-rdma-queue-pair.h',
+        'model/mp-qbb-net-device.h',
+        'model/mp-qbb-channel.h',
+        'model/mp-qbb-remote-channel.h',
         ]
 
     if (bld.env['ENABLE_EXAMPLES']):

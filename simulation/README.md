@@ -1,5 +1,7 @@
 # MP-RDMA NS-3 simulator
 
+This is a MP-RDMA NS-3 simulator based on the HPCC implementation for simulating the performance of MP-RDMA(Multi-Path RDMA).
+
 ## Build
 
 `./waf configure`

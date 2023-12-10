@@ -23,9 +23,9 @@ namespace ns3
     {
         for (uint32_t i = 0; i < m_node->GetNDevices(); i++)
         {
-            Ptr<QbbNetDevice> dev = NULL;
+            Ptr<MpQbbNetDevice> dev = NULL;
             if (m_node->GetDevice(i)->IsQbb())
-                dev = DynamicCast<QbbNetDevice>(m_node->GetDevice(i));
+                dev = DynamicCast<MpQbbNetDevice>(m_node->GetDevice(i));
             m_rdma->m_nic.push_back(MpRdmaInterfaceMgr(dev));
             m_rdma->m_nic.back().qpGrp = CreateObject<MpRdmaQueuePairGroup>();
         }

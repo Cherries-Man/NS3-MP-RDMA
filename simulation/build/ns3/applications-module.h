@@ -9,6 +9,8 @@
 // Module headers:
 #include "bulk-send-application.h"
 #include "bulk-send-helper.h"
+#include "mp-rdma-client-helper.h"
+#include "mp-rdma-client.h"
 #include "on-off-helper.h"
 #include "onoff-application.h"
 #include "packet-loss-counter.h"

@@ -8,6 +8,10 @@
 
 // Module headers:
 #include "cn-header.h"
+#include "mp-rdma-driver.h"
+#include "mp-rdma-hw.h"
+#include "mp-rdma-queue-pair.h"
+#include "myf-hello.h"
 #include "pause-header.h"
 #include "pint.h"
 #include "point-to-point-channel.h"

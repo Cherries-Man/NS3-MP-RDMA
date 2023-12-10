@@ -68,6 +68,8 @@
 #include "loopback-net-device.h"
 #include "ndisc-cache.h"
 #include "rdma.h"
+#include "rocev2-ack-header.h"
+#include "rocev2-data-header.h"
 #include "rtt-estimator.h"
 #include "seq-ts-header.h"
 #include "tcp-header.h"

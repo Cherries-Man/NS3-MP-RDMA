@@ -9,7 +9,9 @@
 // Module headers:
 #include "cn-header.h"
 #include "mp-qbb-channel.h"
+#include "mp-qbb-helper.h"
 #include "mp-qbb-net-device.h"
+#include "mp-qbb-remote-channel.h"
 #include "mp-rdma-driver.h"
 #include "mp-rdma-hw.h"
 #include "mp-rdma-queue-pair.h"

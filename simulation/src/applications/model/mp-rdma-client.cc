@@ -26,7 +26,7 @@ namespace ns3
     TypeId
     MpRdmaClient::GetTypeId(void)
     {
-        static TypeId tid = TypeId("ns3::RdmaClient")
+        static TypeId tid = TypeId("ns3::MpRdmaClient")
                                 .SetParent<Application>()
                                 .AddConstructor<MpRdmaClient>()
                                 .AddAttribute("WriteSize",

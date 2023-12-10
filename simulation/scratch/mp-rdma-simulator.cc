@@ -171,7 +171,7 @@ uint32_t ip_to_node_id(Ipv4Address ip)
 	return (ip.Get() >> 8) & 0xffff;
 }
 
-void qp_finish(FILE *fout, Ptr<RdmaQueuePair> q)
+void qp_finish(FILE *fout, Ptr<MpRdmaQueuePair> q)
 {
 	uint32_t sid = ip_to_node_id(q->sip), did = ip_to_node_id(q->dip);
 	uint64_t base_rtt = pairRtt[sid][did], b = pairBw[sid][did];
@@ -1029,9 +1029,9 @@ int main(int argc, char *argv[])
 
 	// set ACK priority on hosts
 	if (ack_high_prio)
-		RdmaEgressQueue::ack_q_idx = 0;
+		MpRdmaEgressQueue::ack_q_idx = 0;
 	else
-		RdmaEgressQueue::ack_q_idx = 3;
+		MpRdmaEgressQueue::ack_q_idx = 3;
 
 	// setup routing
 	CalculateRoutes(n);

@@ -1,14 +1,14 @@
 
-#include "mp-rdma-hw.h"
-#include "rocev2-data-header.h"
+#include <ns3/mp-rdma-hw.h>
+#include <ns3/rocev2-data-header.h>
 #include <ns3/seq-ts-header.h>
 #include <random>
 #include <ctime>
 #include <ns3/ppp-header.h>
 #include <ns3/qbb-header.h>
 #include <algorithm>
-#include "rocev2-ack-header.h"
-#include "mp-qbb-net-device.h"
+#include <ns3/rocev2-ack-header.h>
+#include <ns3/mp-qbb-net-device.h>
 #include <ns3/uinteger.h>
 
 namespace ns3
@@ -220,12 +220,12 @@ namespace ns3
         return 0;
     }
 
-    void PktSent(Ptr<MpRdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap)
+    void MpRdmaHw::PktSent(Ptr<MpRdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap)
     {
         UpdateNextAvail(qp, interframeGap, pkt->GetSize());
     }
 
-    void UpdateNextAvail(Ptr<MpRdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size)
+    void MpRdmaHw::UpdateNextAvail(Ptr<MpRdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size)
     {
         Time sendingTime = interframeGap + Seconds(pkt_size * 8.0 / qp->m_rate.GetBitRate());
         qp->m_nextAvail = Simulator::Now() + sendingTime;

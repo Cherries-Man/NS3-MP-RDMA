@@ -15,7 +15,7 @@
 #include "ns3/ipv4-header.h"
 #include "ns3/simulator.h"
 #include "ns3/point-to-point-channel.h"
-#include "mp-qbb-channel.h"
+#include "ns3/mp-qbb-channel.h"
 #include "ns3/random-variable.h"
 #include "ns3/flow-id-tag.h"
 #include "ns3/qbb-header.h"
@@ -29,7 +29,7 @@
 
 #include <iostream>
 
-NS_LOG_COMPONENT_DEFINE("QbbNetDevice");
+NS_LOG_COMPONENT_DEFINE("MpQbbNetDevice");
 
 namespace ns3
 {
@@ -38,11 +38,11 @@ namespace ns3
     // RdmaEgressQueue
     TypeId MpRdmaEgressQueue::GetTypeId(void)
     {
-        static TypeId tid = TypeId("ns3::RdmaEgressQueue")
+        static TypeId tid = TypeId("ns3::MpRdmaEgressQueue")
                                 .SetParent<Object>()
-                                .AddTraceSource("RdmaEnqueue", "Enqueue a packet in the RdmaEgressQueue.",
+                                .AddTraceSource("MpRdmaEnqueue", "Enqueue a packet in the MpRdmaEgressQueue.",
                                                 MakeTraceSourceAccessor(&MpRdmaEgressQueue::m_traceRdmaEnqueue))
-                                .AddTraceSource("RdmaDequeue", "Dequeue a packet in the RdmaEgressQueue.",
+                                .AddTraceSource("MpRdmaDequeue", "Dequeue a packet in the MpRdmaEgressQueue.",
                                                 MakeTraceSourceAccessor(&MpRdmaEgressQueue::m_traceRdmaDequeue));
         return tid;
     }
@@ -170,7 +170,7 @@ namespace ns3
     TypeId
     MpQbbNetDevice::GetTypeId(void)
     {
-        static TypeId tid = TypeId("ns3::QbbNetDevice")
+        static TypeId tid = TypeId("ns3::MpQbbNetDevice")
                                 .SetParent<PointToPointNetDevice>()
                                 .AddConstructor<MpQbbNetDevice>()
                                 .AddAttribute("QbbEnabled",

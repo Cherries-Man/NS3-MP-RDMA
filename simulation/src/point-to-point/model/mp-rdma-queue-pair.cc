@@ -42,8 +42,7 @@ namespace ns3
     TypeId MpRdmaQueuePair::GetTypeId(void)
     {
         static TypeId tid = TypeId("ns3::MpRdmaQueuePair")
-                                .SetParent<Object>()
-                                .AddConstructor<MpRdmaQueuePair>();
+                                .SetParent<Object>();
         return tid;
     }
 

@@ -1,3 +1,6 @@
+#ifndef MP_RDMA_QUEUE_PAIR_H
+#define MP_RDMA_QUEUE_PAIR_H
+
 #include <queue>
 #include <vector>
 #include <ns3/object.h>
@@ -91,3 +94,5 @@ namespace ns3
         void Clear(void);
     };
 }
+
+#endif /* MP_RDMA_QUEUE_PAIR_H */

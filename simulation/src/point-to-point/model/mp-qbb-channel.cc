@@ -17,7 +17,7 @@ namespace ns3
     TypeId
     MpQbbChannel::GetTypeId(void)
     {
-        static TypeId tid = TypeId("ns3::QbbChannel")
+        static TypeId tid = TypeId("ns3::MpQbbChannel")
                                 .SetParent<Channel>()
                                 .AddConstructor<MpQbbChannel>()
                                 .AddAttribute("Delay", "Transmission delay through the channel",

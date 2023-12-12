@@ -30,6 +30,7 @@ def build(bld):
         'model/mp-qbb-channel.cc',
         'model/mp-qbb-remote-channel.cc',
         'helper/mp-qbb-helper.cc',
+        'model/mp-switch-node.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('point-to-point')
@@ -68,6 +69,7 @@ def build(bld):
         'model/mp-qbb-channel.h',
         'model/mp-qbb-remote-channel.h',
         'helper/mp-qbb-helper.h',
+        'model/mp-switch-node.h',
         ]
 
     if (bld.env['ENABLE_EXAMPLES']):

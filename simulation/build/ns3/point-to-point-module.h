@@ -15,6 +15,7 @@
 #include "mp-rdma-driver.h"
 #include "mp-rdma-hw.h"
 #include "mp-rdma-queue-pair.h"
+#include "mp-switch-node.h"
 #include "myf-hello.h"
 #include "pause-header.h"
 #include "pint.h"

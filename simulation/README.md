@@ -46,3 +46,4 @@ The direct command to run is:
 - `applications/helper/mp-rdma-client-helper.cc/h`: the helper class for MP-RDMA client
 - `applications/model/mp-rdma-client.cc/h`: the client of MP-RDMA
 - `network/utils/custom-header.cc/h`: a customized header class for speeding up header parsing
+- `point-to-point/model/mp-switch-node.cc/h`:  the node class for switch

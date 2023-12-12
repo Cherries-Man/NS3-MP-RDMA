@@ -70,11 +70,11 @@ namespace ns3
         static TypeId GetTypeId(void);
         uint32_t GetHash(void);
 
+        uint32_t m_bitmapSize = 64;    // bitmap size
         std::vector<uint8_t> m_bitmap; // bitmap for out of order packets
         int32_t aack;                  // accumulative acknoledged sequence number
         int32_t aack_idx;              // bitmap index of aack
         int32_t max_rcv_seq;           // the highest seq number received
-        uint32_t m_bitmapSize = 64;    // bitmap size
         uint16_t m_ipid;
         uint32_t sip, dip;
         uint16_t sport, dport;

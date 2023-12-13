@@ -27,9 +27,9 @@ The direct command to run is:
 
 1. The direct command to debug is:
 `./waf --run scratch/mp-rdma-simulator --command-template="gdb --args %s mix/config.txt"`
-2. At the GDB prompt, enter the run command to start the program.
+2. At the GDB prompt, enter the `run` command to start the program.
 3. Analyzing errors
-    - When the program crashes, GDB stops and you can use a command such as bt (backtrace) to view the call stack. This will show you the order in which each function was called when the crash occurred.
+    - When the program crashes, GDB stops and you can use a command such as `bt` (backtrace) to view the call stack. This will show you the order in which each function was called when the crash occurred.
     - Viewing the specific line of code and call stack that caused the crash can help you determine the cause of the crash.
 
 ## Files added/edited based on NS3

@@ -25,49 +25,66 @@
 #include "ns3/nstime.h"
 #include "ns3/int-header.h"
 
-namespace ns3 {
-/**
- * \ingroup udpclientserver
- * \class SeqTsHeader
- * \brief Packet header for Udp client/server application
- * The header is made of a 32bits sequence number followed by
- * a 64bits time stamp.
- */
-class SeqTsHeader : public Header
+namespace ns3
 {
-public:
-  SeqTsHeader ();
-
   /**
-   * \param seq the sequence number
+   * \ingroup udpclientserver
+   * \class SeqTsHeader
+   * \brief Packet header for Udp client/server application
+   * The header is made of a 32bits sequence number followed by
+   * a 64bits time stamp.
    */
-  void SetSeq (uint32_t seq);
-  /**
-   * \return the sequence number
-   */
-  uint32_t GetSeq (void) const;
-  /**
-   * \return the time stamp
-   */
-  Time GetTs (void) const;
+  class SeqTsHeader : public Header
+  {
+  public:
+    SeqTsHeader();
 
-  void SetPG (uint16_t pg);
-  uint16_t GetPG () const;
+    /**
+     * \param seq the sequence number
+     */
+    void SetSeq(uint32_t seq);
+    /**
+     * \return the sequence number
+     */
+    uint32_t GetSeq(void) const;
+    /**
+     * \return the time stamp
+     */
+    Time GetTs(void) const;
 
-  static TypeId GetTypeId (void);
-  virtual TypeId GetInstanceTypeId (void) const;
-  virtual void Print (std::ostream &os) const;
-  virtual uint32_t GetSerializedSize (void) const;
-  static uint32_t GetHeaderSize(void);
-private:
-  virtual void Serialize (Buffer::Iterator start) const;
-  virtual uint32_t Deserialize (Buffer::Iterator start);
+    void SetPG(uint16_t pg);
+    uint16_t GetPG() const;
 
-  uint32_t m_seq;
-  uint16_t m_pg;
-public:
-  IntHeader ih;
-};
+    /**
+     * \param sync the sync signal to the receiver
+     */
+    void SetSynchronise(uint8_t sync);
+    uint8_t GetSynchronise(void) const;
+
+    /**
+     * \param reTx the retransmission signal from the receiver
+     */
+    void SetReTx(uint8_t reTx);
+    uint8_t GetReTx(void) const;
+
+    static TypeId GetTypeId(void);
+    virtual TypeId GetInstanceTypeId(void) const;
+    virtual void Print(std::ostream &os) const;
+    virtual uint32_t GetSerializedSize(void) const;
+    static uint32_t GetHeaderSize(void);
+
+  private:
+    virtual void Serialize(Buffer::Iterator start) const;
+    virtual uint32_t Deserialize(Buffer::Iterator start);
+
+    uint32_t m_seq;
+    uint16_t m_pg;
+    uint8_t m_synchronise;
+    uint8_t m_ReTx;
+
+  public:
+    IntHeader ih;
+  };
 
 } // namespace ns3
 

@@ -24,98 +24,125 @@
 #include "ns3/simulator.h"
 #include "seq-ts-header.h"
 
-NS_LOG_COMPONENT_DEFINE ("SeqTsHeader");
+NS_LOG_COMPONENT_DEFINE("SeqTsHeader");
 
-namespace ns3 {
+namespace ns3
+{
 
-NS_OBJECT_ENSURE_REGISTERED (SeqTsHeader);
+  NS_OBJECT_ENSURE_REGISTERED(SeqTsHeader);
 
-SeqTsHeader::SeqTsHeader ()
-  : m_seq (0)
-{
-	if (IntHeader::mode == 1)
-		ih.ts = Simulator::Now().GetTimeStep();
-}
+  SeqTsHeader::SeqTsHeader()
+      : m_seq(0)
+  {
+    if (IntHeader::mode == 1)
+      ih.ts = Simulator::Now().GetTimeStep();
+  }
 
-void
-SeqTsHeader::SetSeq (uint32_t seq)
-{
-  m_seq = seq;
-}
-uint32_t
-SeqTsHeader::GetSeq (void) const
-{
-  return m_seq;
-}
+  void
+  SeqTsHeader::SetSeq(uint32_t seq)
+  {
+    m_seq = seq;
+  }
+  uint32_t
+  SeqTsHeader::GetSeq(void) const
+  {
+    return m_seq;
+  }
 
-void
-SeqTsHeader::SetPG (uint16_t pg)
-{
-	m_pg = pg;
-}
-uint16_t
-SeqTsHeader::GetPG (void) const
-{
-	return m_pg;
-}
+  void
+  SeqTsHeader::SetPG(uint16_t pg)
+  {
+    m_pg = pg;
+  }
+  uint16_t
+  SeqTsHeader::GetPG(void) const
+  {
+    return m_pg;
+  }
 
-Time
-SeqTsHeader::GetTs (void) const
-{
-	NS_ASSERT_MSG(IntHeader::mode == 1, "SeqTsHeader cannot GetTs when IntHeader::mode != 1");
-	return TimeStep (ih.ts);
-}
+  Time
+  SeqTsHeader::GetTs(void) const
+  {
+    NS_ASSERT_MSG(IntHeader::mode == 1, "SeqTsHeader cannot GetTs when IntHeader::mode != 1");
+    return TimeStep(ih.ts);
+  }
 
-TypeId
-SeqTsHeader::GetTypeId (void)
-{
-  static TypeId tid = TypeId ("ns3::SeqTsHeader")
-    .SetParent<Header> ()
-    .AddConstructor<SeqTsHeader> ()
-  ;
-  return tid;
-}
-TypeId
-SeqTsHeader::GetInstanceTypeId (void) const
-{
-  return GetTypeId ();
-}
-void
-SeqTsHeader::Print (std::ostream &os) const
-{
-  //os << "(seq=" << m_seq << " time=" << TimeStep (m_ts).GetSeconds () << ")";
-	//os << m_seq << " " << TimeStep (m_ts).GetSeconds () << " " << m_pg;
-	os << m_seq << " " << m_pg;
-}
-uint32_t
-SeqTsHeader::GetSerializedSize (void) const
-{
-	return GetHeaderSize();
-}
-uint32_t SeqTsHeader::GetHeaderSize(void){
-	return 6 + IntHeader::GetStaticSize();
-}
+  void SeqTsHeader::SetSynchronise(uint8_t sync)
+  {
+    m_synchronise = sync;
+  }
 
-void
-SeqTsHeader::Serialize (Buffer::Iterator start) const
-{
-  Buffer::Iterator i = start;
-  i.WriteHtonU32 (m_seq);
-  i.WriteHtonU16 (m_pg);
+  uint8_t SeqTsHeader::GetSynchronise(void) const
+  {
+    return m_synchronise;
+  }
 
-  // write IntHeader
-  ih.Serialize(i);
-}
-uint32_t
-SeqTsHeader::Deserialize (Buffer::Iterator start)
-{
-  Buffer::Iterator i = start;
-  m_seq = i.ReadNtohU32 ();
-  m_pg =  i.ReadNtohU16 ();
+  void SeqTsHeader::SetReTx(uint8_t reTx)
+  {
+    m_ReTx = reTx;
+  }
 
-  // read IntHeader
-  ih.Deserialize(i);
-  return GetSerializedSize ();
-}
+  uint8_t SeqTsHeader::GetReTx(void) const
+  {
+    return m_ReTx;
+  }
+
+  TypeId
+  SeqTsHeader::GetTypeId(void)
+  {
+    static TypeId tid = TypeId("ns3::SeqTsHeader")
+                            .SetParent<Header>()
+                            .AddConstructor<SeqTsHeader>();
+    return tid;
+  }
+  TypeId
+  SeqTsHeader::GetInstanceTypeId(void) const
+  {
+    return GetTypeId();
+  }
+  void
+  SeqTsHeader::Print(std::ostream &os) const
+  {
+    // os << "(seq=" << m_seq << " time=" << TimeStep (m_ts).GetSeconds () << ")";
+    // os << m_seq << " " << TimeStep (m_ts).GetSeconds () << " " << m_pg;
+    os << m_seq << " " << m_pg;
+  }
+  uint32_t
+  SeqTsHeader::GetSerializedSize(void) const
+  {
+    return GetHeaderSize();
+  }
+  uint32_t SeqTsHeader::GetHeaderSize(void)
+  {
+    return 6 + 2 + IntHeader::GetStaticSize();
+  }
+
+  void
+  SeqTsHeader::Serialize(Buffer::Iterator start) const
+  {
+    Buffer::Iterator i = start;
+    i.WriteHtonU32(m_seq);
+    i.WriteHtonU16(m_pg);
+
+    // write IntHeader
+    ih.Serialize(i);
+
+    i.WriteU8(m_synchronise);
+    i.WriteU8(m_ReTx);
+  }
+  uint32_t
+  SeqTsHeader::Deserialize(Buffer::Iterator start)
+  {
+    Buffer::Iterator i = start;
+    m_seq = i.ReadNtohU32();
+    m_pg = i.ReadNtohU16();
+
+    // read IntHeader
+    ih.Deserialize(i);
+
+    m_synchronise = i.ReadU8();
+    m_ReTx = i.ReadU8();
+    return GetSerializedSize();
+  }
 
 } // namespace ns3

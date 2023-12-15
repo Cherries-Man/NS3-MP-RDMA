@@ -192,6 +192,9 @@ namespace ns3
 				i.WriteU16(ack.pg);
 				i.WriteU32(ack.seq);
 				udp.ih.Serialize(i);
+				// RoCEv2AckHeader
+				i.WriteU8(ack.ReTx);
+				i.WriteU32(ack.AACK);
 			}
 			else if (l3Prot == 0xFE)
 			{ // PFC

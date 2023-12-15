@@ -104,9 +104,9 @@ namespace ns3
      */
     MpRdmaRxQueuePair::MpRdmaRxQueuePair()
         : m_bitmap(m_bitmapSize, 0),
-          aack(-1),
-          aack_idx(-1),
-          max_rcv_seq(-1),
+          aack(0),
+          aack_idx(0),
+          max_rcv_seq(0),
           m_ipid(0),
           sip(0),
           dip(0),

@@ -248,8 +248,8 @@ namespace ns3
         {
             uint8_t *buf = p->GetBuffer();
             if (buf[PppHeader::GetStaticSize() + 9] == 0x11)
-            {                                                                               // udp packet
-                IntHeader *ih = (IntHeader *)&buf[PppHeader::GetStaticSize() + 20 + 8 + 6]; // ppp, ip, udp, SeqTs, INT
+            {                                                                                   // udp packet
+                IntHeader *ih = (IntHeader *)&buf[PppHeader::GetStaticSize() + 20 + 8 + 6 + 2]; // ppp, ip, udp, SeqTs, INT, RoCEv2Header
                 Ptr<MpQbbNetDevice> dev = DynamicCast<MpQbbNetDevice>(m_devices[ifIndex]);
                 if (m_ccMode == 3)
                 { // HPCC

@@ -34,7 +34,7 @@
 #include <ns3/mp-rdma-client.h>
 #include <ns3/mp-rdma-client-helper.h>
 #include <ns3/mp-rdma-driver.h>
-#include <ns3/switch-node.h>
+#include <ns3/mp-switch-node.h>
 #include <ns3/sim-setting.h>
 
 using namespace ns3;
@@ -211,7 +211,7 @@ void monitor_buffer(FILE *qlen_output, NodeContainer *n)
 	{
 		if (n->Get(i)->GetNodeType() == 1)
 		{ // is switch
-			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n->Get(i));
+			Ptr<MpSwitchNode> sw = DynamicCast<MpSwitchNode>(n->Get(i));
 			if (queue_result.find(i) == queue_result.end())
 				queue_result[i];
 			for (uint32_t j = 1; j < sw->GetNDevices(); j++)
@@ -323,7 +323,7 @@ void SetRoutingEntries()
 				Ptr<Node> next = nexts[k];
 				uint32_t interface = nbr2if[node][next].idx;
 				if (node->GetNodeType() == 1)
-					DynamicCast<SwitchNode>(node)->AddTableEntry(dstAddr, interface);
+					DynamicCast<MpSwitchNode>(node)->AddTableEntry(dstAddr, interface);
 				else
 				{
 					node->GetObject<MpRdmaDriver>()->m_rdma->AddTableEntry(dstAddr, interface);
@@ -346,7 +346,7 @@ void TakeDownLink(NodeContainer n, Ptr<Node> a, Ptr<Node> b)
 	for (uint32_t i = 0; i < n.GetN(); i++)
 	{
 		if (n.Get(i)->GetNodeType() == 1)
-			DynamicCast<SwitchNode>(n.Get(i))->ClearTable();
+			DynamicCast<MpSwitchNode>(n.Get(i))->ClearTable();
 		else
 			n.Get(i)->GetObject<MpRdmaDriver>()->m_rdma->ClearTable();
 	}
@@ -776,7 +776,7 @@ int main(int argc, char *argv[])
 
 	bool dynamicth = use_dynamic_pfc_threshold;
 
-	// 为与 QbbNetDevice 相关的仿真参数设置默认值
+	// 为与 MpQbbNetDevice 相关的仿真参数设置默认值
 	Config::SetDefault("ns3::MpQbbNetDevice::PauseTime", UintegerValue(pause_time));
 	Config::SetDefault("ns3::MpQbbNetDevice::QcnEnabled", BooleanValue(enable_qcn));
 	Config::SetDefault("ns3::MpQbbNetDevice::DynamicThreshold", BooleanValue(dynamicth));
@@ -829,7 +829,7 @@ int main(int argc, char *argv[])
 			n.Add(CreateObject<Node>());
 		else
 		{
-			Ptr<SwitchNode> sw = CreateObject<SwitchNode>();
+			Ptr<MpSwitchNode> sw = CreateObject<MpSwitchNode>();
 			n.Add(sw);
 			sw->SetAttribute("EcnEnabled", BooleanValue(enable_qcn));
 		}
@@ -857,14 +857,11 @@ int main(int argc, char *argv[])
 	//
 	// Explicitly create the channels required by the topology.
 	//
-
-	//
-	// set error rate model
-	//
 	Ptr<RateErrorModel> rem = CreateObject<RateErrorModel>();
 	Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
 	rem->SetRandomVariable(uv);
 	uv->SetStream(50);
+	// set error rate model
 	rem->SetAttribute("ErrorRate", DoubleValue(error_rate_per_link));
 	rem->SetAttribute("ErrorUnit", StringValue("ERROR_UNIT_PACKET"));
 
@@ -950,7 +947,7 @@ int main(int argc, char *argv[])
 	{
 		if (n.Get(i)->GetNodeType() == 1)
 		{ // is switch
-			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n.Get(i));
+			Ptr<MpSwitchNode> sw = DynamicCast<MpSwitchNode>(n.Get(i));
 			uint32_t shift = 3; // by default 1/8
 			for (uint32_t j = 1; j < sw->GetNDevices(); j++)
 			{
@@ -1071,7 +1068,7 @@ int main(int argc, char *argv[])
 	{
 		if (n.Get(i)->GetNodeType() == 1)
 		{ // switch
-			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n.Get(i));
+			Ptr<MpSwitchNode> sw = DynamicCast<MpSwitchNode>(n.Get(i));
 			sw->SetAttribute("CcMode", UintegerValue(cc_mode));
 			sw->SetAttribute("MaxRtt", UintegerValue(maxRtt));
 		}

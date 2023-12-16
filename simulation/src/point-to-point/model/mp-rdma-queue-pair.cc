@@ -10,6 +10,7 @@ namespace ns3
     MpRdmaQueuePair::MpRdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport, uint32_t _mtu)
         : m_mode(MP_RDMA_HW_MODE_NORMAL),
           m_cwnd(1.0),
+          m_inflate(0),
           m_lastSyncTime(Simulator::Now()),
           snd_una(0),
           snd_retx(0),
@@ -96,7 +97,16 @@ namespace ns3
 
     bool MpRdmaQueuePair::IsWinBound()
     {
-        return snd_nxt - snd_una >= m_cwnd;
+        // return snd_nxt - snd_una >= m_cwnd;
+        printf("CalAwnd: %f\n", CalAwnd());
+        return CalAwnd() <= 0;
+    }
+
+    double MpRdmaQueuePair::CalAwnd()
+    {
+        printf("snd_nxt: %lu, snd_una: %lu, m_inflate: %u, m_cwnd: %f\n", snd_nxt, snd_una, m_inflate, m_cwnd);
+        // return m_cwnd - ((snd_nxt - snd_una) - m_inflate);
+        return m_cwnd + m_inflate - (snd_nxt - snd_una);
     }
 
     /**

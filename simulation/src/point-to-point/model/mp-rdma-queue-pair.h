@@ -31,6 +31,7 @@ namespace ns3
         uint32_t GetHash(void);
         bool IsFinished();
         bool IsWinBound();
+        double CalAwnd();
 
         enum Mode // mode of transport
         {

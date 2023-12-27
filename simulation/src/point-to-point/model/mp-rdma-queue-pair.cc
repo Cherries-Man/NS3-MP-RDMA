@@ -15,7 +15,7 @@ namespace ns3
           snd_una(0),
           snd_retx(0),
           max_acked_seq(-1),
-          snd_nxt(0),
+          snd_nxt(1),
           snd_done(0),
           m_lastProbpathTime(Simulator::Now()),
           m_size(0),
@@ -49,7 +49,7 @@ namespace ns3
 
     uint32_t MpRdmaQueuePair::GetPacketsLeft()
     {
-        return ((m_size - snd_nxt) + (m_mtu - 1)) / m_mtu;
+        return ((m_size - snd_done * m_mtu) + (m_mtu - 1)) / m_mtu;
     }
 
     uint64_t MpRdmaQueuePair::GetBytesLeft()
@@ -93,20 +93,21 @@ namespace ns3
     bool MpRdmaQueuePair::IsFinished()
     {
         return snd_done * m_mtu >= m_size;
+        // return snd_una * m_mtu >= m_size;
     }
 
     bool MpRdmaQueuePair::IsWinBound()
     {
         // return snd_nxt - snd_una >= m_cwnd;
-        printf("CalAwnd: %f\n", CalAwnd());
-        return CalAwnd() <= 0;
+        // printf("CalAwnd: %f\n", CalAwnd());
+        return CalAwnd() < 1.0 || m_vpQueue.empty();
     }
 
     double MpRdmaQueuePair::CalAwnd()
     {
-        printf("snd_nxt: %lu, snd_una: %lu, m_inflate: %u, m_cwnd: %f\n", snd_nxt, snd_una, m_inflate, m_cwnd);
+        // printf("snd_nxt: %lu, snd_una: %lu, m_inflate: %u, m_cwnd: %f\n", snd_nxt, snd_una, m_inflate, m_cwnd);
         // return m_cwnd - ((snd_nxt - snd_una) - m_inflate);
-        return m_cwnd + m_inflate - (snd_nxt - snd_una);
+        return m_cwnd + m_inflate - (snd_done - snd_una);
     }
 
     /**

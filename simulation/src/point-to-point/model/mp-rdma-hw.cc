@@ -59,15 +59,17 @@ namespace ns3
 
     Ptr<Packet> MpRdmaHw::GetNxtPacket(Ptr<MpRdmaQueuePair> qp)
     {
+        printf("GetNxtPacket()\n");
         // return null if no more packets to send
         if (qp->m_vpQueue.empty())
         {
+            printf("m_vpQueue is empty\n");
             return nullptr;
         }
 
         Ptr<Packet> p;
         // create RoCEv2DataHeader
-        RoCEv2DataHeader rocev2;
+        // RoCEv2DataHeader rocev2;
         // create SeqTsHeader
         SeqTsHeader seqTs;
         // create udp header
@@ -83,10 +85,31 @@ namespace ns3
             uint32_t payload_size = qp->GetPacketsLeft() == 1 ? qp->GetBytesLeft() : m_mtu;
             p = Create<Packet>(payload_size);
             // if time arrive or meet the last packet, set synchronise and ReTx
-            if (qp->m_lastSyncTime + m_alpha * (m_delta / qp->m_cwnd) * qp->m_baseRtt < Simulator::Now() || qp->m_size / m_mtu == qp->snd_done)
+            printf("qp->m_lastSyncTime = %lld\n", qp->m_lastSyncTime.GetTimeStep());
+            printf("m_alpha * m_delta / (qp->m_cwnd / qp->m_baseRtt) = %f\n",
+                   m_alpha * m_delta / (qp->m_cwnd / qp->m_baseRtt));
+            printf("qp->m_lastSyncTime + m_alpha * m_delta / (qp->m_cwnd / qp->m_baseRtt) = %f\n",
+                   (qp->m_lastSyncTime.GetTimeStep() + m_alpha * m_delta / (qp->m_cwnd / qp->m_baseRtt)));
+            printf("Simulator::Now().GetTimeStep() = %f\n", static_cast<double>(Simulator::Now().GetTimeStep()));
+            printf("qp->m_size: %llu\n", qp->m_size);
+            printf("m_mtu: %lu\n", m_mtu);
+            printf("qp->snd_done: %llu\n", qp->snd_done);
+            printf("qp->m_size / m_mtu: %llu\n", qp->m_size / m_mtu);
+            if (qp->m_lastSyncTime.GetTimeStep() + m_alpha * m_delta / (qp->m_cwnd / qp->m_baseRtt) <
+                    static_cast<double>(Simulator::Now().GetTimeStep()) ||
+                qp->m_size / m_mtu == qp->snd_done)
             {
-                rocev2.SetSynchronise(1);
+                // rocev2.SetSynchronise(1);
+                printf("SetSynchronise(1)\n");
+                seqTs.SetSynchronise(1);
+                printf("seqTs.GetSynchronise(): %u\n", seqTs.GetSynchronise());
                 qp->m_lastSyncTime = Simulator::Now();
+            }
+            else
+            {
+                printf("SetSynchronise(0)\n");
+                // seqTs.SetSynchronise(0);
+                printf("seqTs.GetSynchronise(): %u\n", seqTs.GetSynchronise());
             }
             seqTs.SetSeq(qp->snd_done);
             qp->snd_done++;
@@ -96,7 +119,8 @@ namespace ns3
             uint32_t payload_size = qp->snd_retx == qp->m_size / m_mtu ? qp->m_size % m_mtu : m_mtu;
             p = Create<Packet>(payload_size);
             // recovery mode
-            rocev2.SetReTx(1);
+            // rocev2.SetReTx(1);
+            seqTs.SetReTx(1);
             seqTs.SetSeq(qp->snd_retx);
         }
         else
@@ -109,6 +133,7 @@ namespace ns3
 
         VirtualPath vp = qp->m_vpQueue.front();
         qp->sport = vp.sPort;
+        printf("qp->sport = %d\n", qp->sport);
         if (vp.numSend == 1)
         {
             qp->m_vpQueue.pop();
@@ -135,7 +160,7 @@ namespace ns3
 
         ppp.SetProtocol(0x0021); // EtherToPpp(0x800), see point-to-point-net-device.cc
 
-        p->AddHeader(rocev2);
+        // p->AddHeader(rocev2);
         p->AddHeader(seqTs);
         p->AddHeader(udpHeader);
         p->AddHeader(ipHeader);
@@ -143,28 +168,38 @@ namespace ns3
 
         // update state
         qp->m_ipid++;
-        qp->snd_nxt++;
+        // qp->snd_nxt++;
 
         return p;
     }
 
     int MpRdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch)
     {
-        Ptr<MpRdmaRxQueuePair> rxMpQp = GetRxQp(ch.dip, ch.sip, ch.udp.dport, ch.udp.sport, ch.udp.pg, true);
-        if (ch.udp.seq > rxMpQp->aack + rxMpQp->m_bitmapSize)
+        printf("ReceiveUDP()\n");
+        Ptr<MpRdmaRxQueuePair> rxMpQp = GetRxQp(ch.dip, ch.sip, ch.udp.dport,
+                                                ch.udp.sport, ch.udp.pg, true);
+        if (ch.udp.seq >= rxMpQp->aack + rxMpQp->m_bitmapSize)
         {
             // out of window, drop the packet
             return 1;
         }
-        if (ch.udp.seq <= rxMpQp->aack ||
+        printf("ch.udp.seq = %u\n", ch.udp.seq);
+        printf("rxMpQp->aack = %u\n", rxMpQp->aack);
+        printf("ch.udp.seq < rxMpQp->aack = %d\n", ch.udp.seq < rxMpQp->aack);
+        printf("(rxMpQp->aack_idx + (ch.udp.seq - rxMpQp->aack)) %% rxMpQp->m_bitmapSize = %d\n",
+               (rxMpQp->aack_idx + (ch.udp.seq - rxMpQp->aack)) % rxMpQp->m_bitmapSize);
+        printf("rxMpQp->m_bitmapSize = %u\n", rxMpQp->m_bitmapSize);
+        if (ch.udp.seq < rxMpQp->aack ||
             rxMpQp->m_bitmap[(rxMpQp->aack_idx + (ch.udp.seq - rxMpQp->aack)) % rxMpQp->m_bitmapSize] == 1)
         {
             // duplicate packet, drop it
+            printf("duplicate packet, drop it\n");
             return 2;
         }
         if (ch.udp.seq > rxMpQp->max_rcv_seq)
         {
             rxMpQp->max_rcv_seq = ch.udp.seq;
+            printf("rxMpQp->max_rcv_seq = %u\n", rxMpQp->max_rcv_seq);
         }
         /**
          * In here, we only mark the packet as received. We don't
@@ -176,7 +211,7 @@ namespace ns3
         uint8_t ecnbits = ch.GetIpv4EcnBits();
         // calculate payload_size
         uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
-        RoCEv2AckHeader roCEv2AckH;
+        // RoCEv2AckHeader roCEv2AckH;
         qbbHeader seqh;
         Ipv4Header head;
 
@@ -193,12 +228,14 @@ namespace ns3
         head.SetDestination(Ipv4Address(ch.sip));
         head.SetSource(Ipv4Address(ch.dip));
         Ptr<Packet> newp = Create<Packet>(std::max(60 - 14 - 20 -
-                                                       (int)seqh.GetSerializedSize() -
-                                                       (int)roCEv2AckH.GetSerializedSize(),
+                                                       (int)seqh.GetSerializedSize() /* -
+                                                    (int)roCEv2AckH.GetSerializedSize()*/
+                                                   ,
                                                    0));
         // default set ACK
         head.SetProtocol(0xFC);
-        if (ch.udp.synchronise && !doSynch(rxMpQp))
+        printf("ch.udp.synchronise = %u\n", ch.udp.synchronise);
+        if (ch.udp.synchronise == 1 && !doSynch(rxMpQp))
         {
             // if sync fail set NACK
             head.SetProtocol(0xFD);
@@ -206,10 +243,11 @@ namespace ns3
         head.SetTtl(64);
         head.SetPayloadSize(newp->GetSize());
         head.SetIdentification(rxMpQp->m_ipid++);
-        roCEv2AckH.SetReTx(ch.udp.ReTx);  // set ReTx rely on the send packet
-        roCEv2AckH.SetAACK(rxMpQp->aack); // set AACK
+        seqh.SetReTx(ch.udp.ReTx);  // set ReTx rely on the send packet
+        seqh.SetAACK(rxMpQp->aack); // set AACK
+        printf("seqh.GetAACK(): %u\n", seqh.GetAACK());
         // add headers in order
-        newp->AddHeader(roCEv2AckH);
+        // newp->AddHeader(roCEv2AckH);
         newp->AddHeader(seqh);
         newp->AddHeader(head);
         AddHeader(newp, 0x800); // Attach PPP header
@@ -222,17 +260,26 @@ namespace ns3
 
     void MpRdmaHw::PktSent(Ptr<MpRdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap)
     {
+        printf("PktSent()\n");
         UpdateNextAvail(qp, interframeGap, pkt->GetSize());
     }
 
     void MpRdmaHw::UpdateNextAvail(Ptr<MpRdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size)
     {
         Time sendingTime = interframeGap + Seconds(pkt_size * 8.0 / qp->m_rate.GetBitRate());
+        // if (!qp->m_vpQueue.empty())
+        // {
+        //     qp->m_nextAvail = Simulator::GetMaximumSimulationTime();
+        // }
+        // else
+        // {
         qp->m_nextAvail = Simulator::Now() + sendingTime;
+        // }
     }
 
     int MpRdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch)
     {
+        printf("ReceiveACK()\n");
         Ptr<MpRdmaQueuePair> qp = GetQp(ch.sip, ch.ack.sport, ch.udp.pg);
         uint32_t nic_idx = GetNicIdxOfQp(qp);
         Ptr<MpQbbNetDevice> dev = m_nic[nic_idx].dev;
@@ -247,51 +294,61 @@ namespace ns3
             qp->m_cwnd += 1 / qp->m_cwnd;
         }
 
-        // ACK
-        if (ch.ack.seq >= qp->snd_una && ch.ack.seq < qp->snd_nxt)
-        {
-            qp->m_inflate++;
-        }
-        else
-        {
-            // Ghost ACK, return 1
-            return 1;
-        }
-
-        if (ch.ack.seq <= qp->max_acked_seq - m_delta && ch.ack.ReTx == 0)
-        {
-            // out of order ACK, drop it
-            return 2;
-        }
-        if (ch.ack.AACK + 1 > qp->snd_una)
-        {
-            qp->snd_una = ch.ack.AACK + 1;
-            if (qp->m_mode == MpRdmaQueuePair::Mode::MP_RDMA_HW_MODE_RECOVERY && qp->snd_una > qp->recovery)
-            {
-                qp->m_mode = MpRdmaQueuePair::Mode::MP_RDMA_HW_MODE_NORMAL;
-            }
-        }
-        if (ch.ack.seq > qp->max_acked_seq)
-        {
-            qp->max_acked_seq = ch.ack.seq;
-        }
-
         if (ch.l3Prot == 0xFD)
         { // NACK
             qp->m_mode = MpRdmaQueuePair::MP_RDMA_HW_MODE_RECOVERY;
             qp->snd_retx = ch.ack.seq;
-            qp->recovery = qp->snd_nxt;
+            qp->recovery = qp->snd_done;
         }
         else if (ch.l3Prot == 0xFC)
         { // ACK
-            uint32_t awnd = qp->m_cwnd - ((qp->snd_nxt - qp->snd_una) - qp->m_inflate);
+            if (ch.ack.seq >= qp->snd_una && ch.ack.seq < qp->snd_done)
+            {
+                printf("do inflate++\n");
+                qp->m_inflate++;
+            }
+            else
+            {
+                // Ghost ACK, return 1
+                return 1;
+            }
+
+            if (ch.ack.seq <= qp->max_acked_seq - m_delta && ch.ack.ReTx == 0)
+            {
+                // out of order ACK, drop it
+                return 2;
+            }
+            printf("ch.ack.AACK = %u\n", ch.ack.AACK);
+            if (ch.ack.AACK > qp->snd_una)
+            { // update m_inflate, snd_una
+                qp->m_inflate -= ch.ack.AACK - qp->snd_una;
+                qp->snd_una = ch.ack.AACK;
+                if (qp->m_mode == MpRdmaQueuePair::Mode::MP_RDMA_HW_MODE_RECOVERY &&
+                    qp->snd_una >= qp->recovery)
+                {
+                    qp->m_mode = MpRdmaQueuePair::Mode::MP_RDMA_HW_MODE_NORMAL;
+                }
+            }
+            if (ch.ack.seq > qp->max_acked_seq)
+            {
+                qp->max_acked_seq = ch.ack.seq;
+            }
+            printf("qp->cwmd = %f\n", qp->m_cwnd);
+            printf("qp->m_inflate = %u\n", qp->m_inflate);
+            printf("qp->snd_nxt = %llu\n", qp->snd_nxt);
+            printf("qp->snd_una = %llu\n", qp->snd_una);
+            uint32_t awnd = qp->m_cwnd + qp->m_inflate - (qp->snd_nxt - qp->snd_una);
             if (qp->GetPacketsLeft() == 0)
             { // if there is no packet to send, do path window redution
+                printf("do path window redution\n");
                 qp->m_cwnd = std::max(qp->m_cwnd - 1, 1.0);
                 return 0;
             }
+            printf("awnd = %d\n", awnd);
             uint8_t numSend = std::min(std::min(awnd, 2u), qp->GetPacketsLeft());
+            printf("numSend = %d\n", numSend);
             qp->m_vpQueue.push({ch.ack.dport, numSend, 0});
+            qp->snd_nxt += numSend;
         }
         else
         {
@@ -299,6 +356,9 @@ namespace ns3
             std::cout << "Received packets other than ACK & NACK" << std::endl;
 #endif
         }
+
+        // ACK may advance the on-the-fly window, allowing more packets to send
+        dev->TriggerTransmit();
 
         return 0;
     }
@@ -333,15 +393,24 @@ namespace ns3
      */
     bool MpRdmaHw::doSynch(Ptr<MpRdmaRxQueuePair> qp)
     {
-        for (int i = 0; i < std::min(m_delta, static_cast<uint32_t>(qp->max_rcv_seq - qp->aack)); i++)
+        printf("doSynch()\n");
+        printf("std::min(m_delta, qp->max_rcv_seq + 1 - qp->aack) = %d\n",
+               std::min(m_delta, qp->max_rcv_seq + 1 - qp->aack));
+        for (int i = 0; i < std::min(m_delta, qp->max_rcv_seq + 1 - qp->aack); i++)
         {
             if (qp->m_bitmap[(qp->aack_idx + i) % qp->m_bitmapSize] == 0)
             {
                 moveRcvWnd(qp, i);
+                printf("doSynch() return false at %d\n", i);
                 return false;
             }
+            else
+            {
+                qp->m_bitmap[(qp->aack_idx + i) % qp->m_bitmapSize] = 0;
+            }
         }
-        moveRcvWnd(qp, std::min(m_delta, static_cast<uint32_t>(qp->max_rcv_seq - qp->aack)));
+        moveRcvWnd(qp, std::min(m_delta, qp->max_rcv_seq + 1 - qp->aack));
+        printf("doSynch() return true\n");
         return true;
     }
 
@@ -350,7 +419,9 @@ namespace ns3
         // update aack
         qp->aack += distance;
         // update aack_idx
-        qp->aack_idx += distance % qp->m_bitmapSize;
+        qp->aack_idx = (qp->aack_idx + distance) % qp->m_bitmapSize;
+        if (qp->aack_idx >= qp->m_bitmapSize)
+            qp->aack_idx = qp->aack_idx % qp->m_bitmapSize;
     }
 
     Ptr<MpRdmaQueuePair> MpRdmaHw::GetQp(uint32_t dip, uint16_t dport, uint16_t pg)
@@ -361,9 +432,10 @@ namespace ns3
         return NULL;
     }
 
-    Ptr<MpRdmaRxQueuePair> MpRdmaHw::GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint16_t pg, bool create)
+    Ptr<MpRdmaRxQueuePair> MpRdmaHw::GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport,
+                                             uint16_t pg, bool create)
     {
-        uint64_t key = GetQpKey(dip, dport, pg);
+        uint64_t key = GetQpKey(dip, sport, pg);
         auto it = m_rxMpQpMap.find(key);
         if (it != m_rxMpQpMap.end())
             return it->second;
@@ -396,7 +468,8 @@ namespace ns3
         }
     }
 
-    void MpRdmaHw::AddQueuePair(uint64_t size, uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport,
+    void MpRdmaHw::AddQueuePair(uint64_t size, uint16_t pg, Ipv4Address sip, Ipv4Address dip,
+                                uint16_t sport, uint16_t dport,
                                 uint32_t win, uint32_t baseRtt, Callback<void> notifyAppFinish)
     {
         // create qp
@@ -413,6 +486,9 @@ namespace ns3
         // set init variables
         DataRate m_bps = m_nic[nic_idx].dev->GetDataRate();
         qp->m_rate = m_bps;
+
+        // Notify Nic
+        m_nic[nic_idx].dev->NewQp(qp);
     }
 
     uint32_t MpRdmaHw::GetNicIdxOfQp(Ptr<MpRdmaQueuePair> qp)

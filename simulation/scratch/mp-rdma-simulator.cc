@@ -141,7 +141,9 @@ void ScheduleFlowInputs()
 	while (flow_input.idx < flow_num && Seconds(flow_input.start_time) == Simulator::Now())
 	{
 		uint32_t port = portNumder[flow_input.src][flow_input.dst]++; // get a new port number
-		MpRdmaClientHelper mpClientHelper(flow_input.pg, serverAddress[flow_input.src], serverAddress[flow_input.dst], port, flow_input.dport, flow_input.maxPacketCount, has_win ? (global_t == 1 ? maxBdp : pairBdp[n.Get(flow_input.src)][n.Get(flow_input.dst)]) : 0, global_t == 1 ? maxRtt : pairRtt[flow_input.src][flow_input.dst]);
+		MpRdmaClientHelper mpClientHelper(flow_input.pg, serverAddress[flow_input.src], serverAddress[flow_input.dst], port, flow_input.dport,
+										  flow_input.maxPacketCount, has_win ? (global_t == 1 ? maxBdp : pairBdp[n.Get(flow_input.src)][n.Get(flow_input.dst)]) : 0, 
+										  global_t == 1 ? maxRtt : pairRtt[flow_input.src][flow_input.dst]);
 		ApplicationContainer appCon = mpClientHelper.Install(n.Get(flow_input.src));
 		appCon.Start(Time(0));
 
@@ -173,6 +175,7 @@ uint32_t ip_to_node_id(Ipv4Address ip)
 
 void qp_finish(FILE *fout, Ptr<MpRdmaQueuePair> q)
 {
+	printf("writing fct.txt.");
 	uint32_t sid = ip_to_node_id(q->sip), did = ip_to_node_id(q->dip);
 	uint64_t base_rtt = pairRtt[sid][did], b = pairBw[sid][did];
 	uint32_t total_bytes = q->m_size + ((q->m_size - 1) / packet_payload_size + 1) * (CustomHeader::GetStaticWholeHeaderSize() - IntHeader::GetStaticSize()); // translate to the minimum bytes required (with header but no INT)

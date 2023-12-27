@@ -163,7 +163,7 @@ namespace ns3
     }
 
     /******************
-     * QbbNetDevice
+     * MpQbbNetDevice
      *****************/
     NS_OBJECT_ENSURE_REGISTERED(MpQbbNetDevice);
 
@@ -243,10 +243,11 @@ namespace ns3
 
     void MpQbbNetDevice::TransmitComplete(void)
     {
+        printf("TransmitComplete()\n");
         NS_LOG_FUNCTION(this);
         NS_ASSERT_MSG(m_txMachineState == BUSY, "Must be BUSY if transmitting");
         m_txMachineState = READY;
-        NS_ASSERT_MSG(m_currentPkt != 0, "QbbNetDevice::TransmitComplete(): m_currentPkt zero");
+        NS_ASSERT_MSG(m_currentPkt != 0, "MpQbbNetDevice::TransmitComplete(): m_currentPkt zero");
         m_phyTxEndTrace(m_currentPkt);
         m_currentPkt = 0;
         DequeueAndTransmit();
@@ -261,8 +262,8 @@ namespace ns3
             return; // Quit if channel busy
         Ptr<Packet> p;
         if (m_node->GetNodeType() == 0)
-        {
-            int qIndex = m_rdmaEQ->GetNextQindex(m_paused);
+        {                                                   // server
+            int qIndex = m_rdmaEQ->GetNextQindex(m_paused); // get next QP index that need to be send
             if (qIndex != -1024)
             {
                 if (qIndex == -1)

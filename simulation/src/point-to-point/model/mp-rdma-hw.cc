@@ -97,7 +97,7 @@ namespace ns3
             printf("qp->m_size / m_mtu: %llu\n", qp->m_size / m_mtu);
             if (qp->m_lastSyncTime.GetTimeStep() + m_alpha * m_delta / (qp->m_cwnd / qp->m_baseRtt) <
                     static_cast<double>(Simulator::Now().GetTimeStep()) ||
-                qp->m_size / m_mtu == qp->snd_done)
+                (qp->m_size + (m_mtu - 1)) / m_mtu == qp->snd_done)
             {
                 // rocev2.SetSynchronise(1);
                 printf("SetSynchronise(1)\n");
@@ -121,6 +121,7 @@ namespace ns3
             // recovery mode
             // rocev2.SetReTx(1);
             seqTs.SetReTx(1);
+            seqTs.SetSynchronise(1);
             seqTs.SetSeq(qp->snd_retx);
         }
         else
@@ -168,7 +169,11 @@ namespace ns3
 
         // update state
         qp->m_ipid++;
-        // qp->snd_nxt++;
+
+        // if(qp->snd_done == (qp->m_size + (m_mtu - 1)) / m_mtu)
+        // {
+        //     QpComplete(qp);
+        // }
 
         return p;
     }
@@ -180,6 +185,7 @@ namespace ns3
                                                 ch.udp.sport, ch.udp.pg, true);
         if (ch.udp.seq >= rxMpQp->aack + rxMpQp->m_bitmapSize)
         {
+            printf("out of window, drop the packer\n");
             // out of window, drop the packet
             return 1;
         }
@@ -296,9 +302,10 @@ namespace ns3
 
         if (ch.l3Prot == 0xFD)
         { // NACK
-            qp->m_mode = MpRdmaQueuePair::MP_RDMA_HW_MODE_RECOVERY;
-            qp->snd_retx = ch.ack.seq;
-            qp->recovery = qp->snd_done;
+            printf("NACK ch.ack.seq: %u\n", ch.ack.seq);
+            // qp->m_mode = MpRdmaQueuePair::MP_RDMA_HW_MODE_RECOVERY;
+            // qp->snd_retx = ch.ack.seq;
+            // qp->recovery = qp->snd_done;
         }
         else if (ch.l3Prot == 0xFC)
         { // ACK
@@ -315,7 +322,7 @@ namespace ns3
 
             if (ch.ack.seq <= qp->max_acked_seq - m_delta && ch.ack.ReTx == 0)
             {
-                // out of order ACK, drop it
+                // out of order ACK, drop it, prune branch
                 return 2;
             }
             printf("ch.ack.AACK = %u\n", ch.ack.AACK);
@@ -337,6 +344,11 @@ namespace ns3
             printf("qp->m_inflate = %u\n", qp->m_inflate);
             printf("qp->snd_nxt = %llu\n", qp->snd_nxt);
             printf("qp->snd_una = %llu\n", qp->snd_una);
+            if (ch.ack.AACK == (qp->m_size + (m_mtu - 1)) / m_mtu)
+            {
+                QpComplete(qp);
+                return 0;
+            }
             uint32_t awnd = qp->m_cwnd + qp->m_inflate - (qp->snd_nxt - qp->snd_una);
             if (qp->GetPacketsLeft() == 0)
             { // if there is no packet to send, do path window redution
@@ -349,6 +361,8 @@ namespace ns3
             printf("numSend = %d\n", numSend);
             qp->m_vpQueue.push({ch.ack.dport, numSend, 0});
             qp->snd_nxt += numSend;
+            // ACK may advance the on-the-fly window, allowing more packets to send
+            dev->TriggerTransmit();
         }
         else
         {
@@ -356,9 +370,6 @@ namespace ns3
             std::cout << "Received packets other than ACK & NACK" << std::endl;
 #endif
         }
-
-        // ACK may advance the on-the-fly window, allowing more packets to send
-        dev->TriggerTransmit();
 
         return 0;
     }
@@ -396,7 +407,10 @@ namespace ns3
         printf("doSynch()\n");
         printf("std::min(m_delta, qp->max_rcv_seq + 1 - qp->aack) = %d\n",
                std::min(m_delta, qp->max_rcv_seq + 1 - qp->aack));
-        for (int i = 0; i < std::min(m_delta, qp->max_rcv_seq + 1 - qp->aack); i++)
+
+        int distance = std::min(m_delta, qp->max_rcv_seq + 1 - qp->aack);
+
+        for (int i = 0; i < distance; i++)
         {
             if (qp->m_bitmap[(qp->aack_idx + i) % qp->m_bitmapSize] == 0)
             {
@@ -409,7 +423,21 @@ namespace ns3
                 qp->m_bitmap[(qp->aack_idx + i) % qp->m_bitmapSize] = 0;
             }
         }
-        moveRcvWnd(qp, std::min(m_delta, qp->max_rcv_seq + 1 - qp->aack));
+
+        for (int i = m_delta; i < qp->max_rcv_seq + 1 - qp->aack; i++)
+        {
+            if (qp->m_bitmap[(qp->aack_idx + i) % qp->m_bitmapSize] == 0)
+            {
+                break;
+            }
+            else
+            {
+                qp->m_bitmap[(qp->aack_idx + i) % qp->m_bitmapSize] = 0;
+                distance++;
+            }
+        }
+        // moveRcvWnd(qp, std::min(m_delta, qp->max_rcv_seq + 1 - qp->aack));
+        moveRcvWnd(qp, distance);
         printf("doSynch() return true\n");
         return true;
     }

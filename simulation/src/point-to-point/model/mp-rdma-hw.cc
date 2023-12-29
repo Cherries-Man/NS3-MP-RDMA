@@ -195,8 +195,9 @@ namespace ns3
         printf("(rxMpQp->aack_idx + (ch.udp.seq - rxMpQp->aack)) %% rxMpQp->m_bitmapSize = %d\n",
                (rxMpQp->aack_idx + (ch.udp.seq - rxMpQp->aack)) % rxMpQp->m_bitmapSize);
         printf("rxMpQp->m_bitmapSize = %u\n", rxMpQp->m_bitmapSize);
-        if (ch.udp.seq < rxMpQp->aack ||
-            rxMpQp->m_bitmap[(rxMpQp->aack_idx + (ch.udp.seq - rxMpQp->aack)) % rxMpQp->m_bitmapSize] == 1)
+        if (ch.udp.seq < rxMpQp->aack /*||
+            rxMpQp->m_bitmap[(rxMpQp->aack_idx + (ch.udp.seq - rxMpQp->aack)) % rxMpQp->m_bitmapSize] == 1*/
+        )
         {
             // duplicate packet, drop it
             printf("duplicate packet, drop it\n");
@@ -245,6 +246,7 @@ namespace ns3
         {
             // if sync fail set NACK
             head.SetProtocol(0xFD);
+            seqh.SetSeq(rxMpQp->aack + 1);
         }
         head.SetTtl(64);
         head.SetPayloadSize(newp->GetSize());
@@ -317,12 +319,14 @@ namespace ns3
             else
             {
                 // Ghost ACK, return 1
+                printf("Ghost ACK, return 1\n");
                 return 1;
             }
 
             if (ch.ack.seq <= qp->max_acked_seq - m_delta && ch.ack.ReTx == 0)
             {
                 // out of order ACK, drop it, prune branch
+                printf("out of order ACK, drop it, prune branch\n");
                 return 2;
             }
             printf("ch.ack.AACK = %u\n", ch.ack.AACK);
